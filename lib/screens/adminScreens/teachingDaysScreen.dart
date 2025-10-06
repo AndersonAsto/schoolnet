@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:schoolnet/screens/adminScreens/yearsScreen.dart';
+import 'package:schoolnet/services/apiService.dart';
 import 'package:schoolnet/utils/colors.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -14,15 +16,25 @@ class _TeachingDaysScreenState extends State<TeachingDaysScreen> {
   int? selectedYearId;
   List<dynamic> years = [];
   Map<int, List<dynamic>> schoolDaysPerYear = {};
+  String? token;
 
   @override
   void initState() {
     super.initState();
     fetchYears();
+    loadTokenAndData();
+  }
+
+  Future<void> loadTokenAndData() async {
+    final savedToken = await storage.read(key: "auth_token");
+    if (savedToken != null) {
+      setState(() => token = savedToken);
+      await fetchYears();
+    }
   }
 
   Future<void> fetchYears() async {
-    final response = await http.get(Uri.parse('${apiUrl}api/years/list'));
+    final response = await ApiService.request("api/years/list");
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
       setState(() {

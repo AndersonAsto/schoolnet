@@ -36,7 +36,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
       CustomNotifications.showNotification(context, "Estás editando un grado. Cancela la edición para guardar uno nuevo.", color: Colors.red);
       return;
     }
-    final url = Uri.parse('${apiUrl}api/courses/create');
+    final url = Uri.parse('${generalUrl}api/courses/create');
     try{
       final response = await http.post(
         url,
@@ -67,7 +67,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
   }
 
   Future<void> getCourses() async {
-    final url = Uri.parse('${apiUrl}api/courses/list');
+    final url = Uri.parse('${generalUrl}api/courses/list');
     try {
       final response = await http.get(url);
 
@@ -102,7 +102,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
       return;
     }
 
-    final url = Uri.parse('${apiUrl}api/courses/update/$idToEdit');
+    final url = Uri.parse('${generalUrl}api/courses/update/$idToEdit');
     try {
       final response = await http.put(
         url,
@@ -129,7 +129,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
   }
 
   Future<void> deleteCourse(int id) async {
-    final url = Uri.parse('${apiUrl}api/courses/delete/$id');
+    final url = Uri.parse('${generalUrl}api/courses/delete/$id');
     try {
       final response = await http.delete(url);
 

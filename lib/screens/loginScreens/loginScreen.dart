@@ -40,16 +40,24 @@ class _LoginScreenState extends State<LoginScreen> {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
 
-        // Guardamos token y rol
+        // Guardamos token, rol y user en storage
         await storage.write(key: "auth_token", value: data["token"]);
         await storage.write(key: "refresh_token", value: data["refreshToken"]);
+        await storage.write(key: "role", value: data["role"]);
+        await storage.write(key: "user", value: jsonEncode(data["user"]));
+
+        // 🔑 Normalizamos el rol a minúsculas
+        final role = (data["role"] as String).toLowerCase();
 
         // Redirigir según rol
         Widget nextPage;
-        if (data["role"] == "Administrador") {
+        if (role == "administrador") {
           nextPage = const AdminNavigationRail();
-        } else if (data["role"] == "Docente") {
-          nextPage = const TeacherNavigationRail();
+        } else if (role == "docente") {
+          nextPage = TeacherNavigationRail(
+            teacher: data["user"],
+            token: data["token"],
+          );
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text("Rol no autorizado")),

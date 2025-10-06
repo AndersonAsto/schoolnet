@@ -1,3 +1,5 @@
+import 'package:schoolnet/screens/adminScreens/yearsScreen.dart';
+import 'package:schoolnet/services/apiService.dart';
 import 'package:schoolnet/utils/colors.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
@@ -17,7 +19,7 @@ class _TeachingBlocksScreenState extends State<TeachingBlocksScreen> {
 
   List<dynamic> yearsList = [];
   List<dynamic> teachingBlocks = [];
-
+  String? token;
   dynamic selectedYears;
 
   final String apiUrl = 'http://localhost:3000/api';
@@ -27,20 +29,33 @@ class _TeachingBlocksScreenState extends State<TeachingBlocksScreen> {
     super.initState();
     fetchYears();
     _fetchBloques();
+    loadTokenAndData();
+  }
+
+  Future<void> loadTokenAndData() async {
+    final savedToken = await storage.read(key: "auth_token");
+    if (savedToken != null) {
+      setState(() => token = savedToken);
+      await fetchYears();
+    }
   }
 
   Future<void> fetchYears() async {
     try {
-      final response = await http.get(Uri.parse('$apiUrl/years/list'));
+      final response = await ApiService.request("api/years/list");
+
       if (response.statusCode == 200) {
         setState(() {
           yearsList = json.decode(response.body);
         });
+      } else {
+        print("Error al cargar años: ${response.body}");
       }
     } catch (e) {
       print('Error cargando años: $e');
     }
   }
+
 
   Future<void> _fetchBloques() async {
     try {

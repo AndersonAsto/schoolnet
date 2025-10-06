@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:schoolnet/screens/adminScreens/yearsScreen.dart';
 import 'package:schoolnet/utils/colors.dart';
 import 'package:http/http.dart' as http;
 import 'package:schoolnet/utils/customNotifications.dart';
@@ -33,6 +34,7 @@ class _StudentEnrollmentsScreenState extends State<StudentEnrollmentsScreen> {
   int? idToEdit;
   List<Map<String, dynamic>> filteredStudentEnrollments = [];
   late _StudentEnrollmentsDataSource _studentEnrollmentsDataSource;
+  String? token;
 
   Future<void> saveStudentEnrollment() async {
     if(
@@ -50,7 +52,7 @@ class _StudentEnrollmentsScreenState extends State<StudentEnrollmentsScreen> {
       return;
     }
 
-    final url = Uri.parse('${apiUrl}api/studentEnrollments/create');
+    final url = Uri.parse('${generalUrl}api/studentEnrollments/create');
     try {
       final response = await http.post(
         url,
@@ -87,7 +89,7 @@ class _StudentEnrollmentsScreenState extends State<StudentEnrollmentsScreen> {
   }
 
   Future<void> getStudentEnrollments() async {
-    final url = Uri.parse('${apiUrl}api/studentEnrollments/list');
+    final url = Uri.parse('${generalUrl}api/studentEnrollments/list');
     try {
       final response = await http.get(url);
 
@@ -127,7 +129,7 @@ class _StudentEnrollmentsScreenState extends State<StudentEnrollmentsScreen> {
       return;
     }
 
-    final url = Uri.parse('${apiUrl}api/studentEnrollments/update/$idToEdit');
+    final url = Uri.parse('${generalUrl}api/studentEnrollments/update/$idToEdit');
     try {
       final response = await http.put(
         url,
@@ -159,7 +161,7 @@ class _StudentEnrollmentsScreenState extends State<StudentEnrollmentsScreen> {
   }
 
   Future<void> deleteStudentEnrollments(int id) async {
-    final url = Uri.parse('${apiUrl}api/studentEnrollments/delete/$id');
+    final url = Uri.parse('${generalUrl}api/studentEnrollments/delete/$id');
     try {
       final response = await http.delete(url);
 
@@ -250,8 +252,15 @@ class _StudentEnrollmentsScreenState extends State<StudentEnrollmentsScreen> {
       onEdit: _handleEditStudentEnrollments,
       onDelete: deleteStudentEnrollments,
     );
+    loadTokenAndData();
   }
 
+  Future<void> loadTokenAndData() async {
+    final savedToken = await storage.read(key: "auth_token");
+    if (savedToken != null) {
+      setState(() => token = savedToken);
+    }
+  }
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -293,7 +302,8 @@ class _StudentEnrollmentsScreenState extends State<StudentEnrollmentsScreen> {
                             hintText: "Seleccionar Año",
                             displayController: yearDisplayController,
                             idController: yearIdController,
-                            onTap: () async => await showYearsSelection(context, yearIdController, yearDisplayController),
+                            token: token,
+                            onTap: () async => await showYearsSelection(context, yearIdController, yearDisplayController, token: token),
                           ),
                         ),
                       ],

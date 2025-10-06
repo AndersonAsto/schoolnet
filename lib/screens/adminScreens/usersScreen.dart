@@ -48,7 +48,7 @@ class _UsersScreenState extends State<UsersScreen> {
       return;
     }
 
-    final url = Uri.parse('${apiUrl}api/users/create');
+    final url = Uri.parse('${generalUrl}api/users/create');
     try {
       final response = await http.post(
         url,
@@ -86,8 +86,8 @@ class _UsersScreenState extends State<UsersScreen> {
 
   Future<void> getUsers({ String? role }) async {
     final url = role != null && role.isNotEmpty
-        ? Uri.parse('${apiUrl}api/users/byRole/$role')
-        : Uri.parse('${apiUrl}api/users/list');
+        ? Uri.parse('${generalUrl}api/users/byRole/$role')
+        : Uri.parse('${generalUrl}api/users/list');
 
     try {
       final response = await http.get(url);
@@ -128,7 +128,7 @@ class _UsersScreenState extends State<UsersScreen> {
       return;
     }
 
-    final url = Uri.parse('${apiUrl}api/users/update/$idToEdit');
+    final url = Uri.parse('${generalUrl}api/users/update/$idToEdit');
     try {
       final response = await http.put(
         url,
@@ -160,7 +160,7 @@ class _UsersScreenState extends State<UsersScreen> {
   }
 
   Future<void> deleteUser(int id) async {
-    final url = Uri.parse('${apiUrl}api/users/delete/$id');
+    final url = Uri.parse('${generalUrl}api/users/delete/$id');
     try {
       final response = await http.delete(url);
 

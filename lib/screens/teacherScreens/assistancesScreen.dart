@@ -1,11 +1,21 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:schoolnet/screens/adminScreens/yearsScreen.dart';
 import 'package:schoolnet/utils/colors.dart';
 import 'package:schoolnet/utils/customDataSelection.dart';
+import 'package:intl/intl.dart';
+import 'package:table_calendar/table_calendar.dart';
 
 class AssistancesScreen extends StatefulWidget {
-  const AssistancesScreen({super.key});
+  final int teacherId;
+  final String token;
+
+  const AssistancesScreen({
+    super.key,
+    required this.teacherId,
+    required this.token,
+  });
 
   @override
   State<AssistancesScreen> createState() => _AssistancesScreenState();
@@ -15,6 +25,7 @@ class _AssistancesScreenState extends State<AssistancesScreen> {
   TextEditingController yearIdController = TextEditingController();
   TextEditingController yearDisplayController = TextEditingController();
 
+  String? token;
   List schedules = [];
   List schoolDays = [];
 
@@ -27,30 +38,63 @@ class _AssistancesScreenState extends State<AssistancesScreen> {
   @override
   void initState() {
     super.initState();
-    _loadSchedules();
-    _loadSchoolDays();
+    loadTokenAndData();
   }
-  List<dynamic> yearsList = [];
 
-  Future<void> _loadSchedules() async {
-    setState(() => loadingSchedules = true);
-    final url = Uri.parse("http://localhost:3000/api/schedules/list");
-    final res = await http.get(url);
-    if (res.statusCode == 200) {
-      schedules = json.decode(res.body);
+  Future<void> loadTokenAndData() async {
+    final savedToken = await storage.read(key: "auth_token");
+    if (savedToken != null) {
+      setState(() => token = savedToken);
+    } else {
+      token = widget.token;
     }
+  }
+
+  // 🧩 Nueva versión del método para cargar horarios por año
+  Future<void> _loadSchedulesByYear() async {
+    final selectedYearId = yearIdController.text.trim();
+    if (selectedYearId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Seleccione primero un año")),
+      );
+      return;
+    }
+
+    setState(() {
+      loadingSchedules = true;
+      schedules = [];
+      selectedScheduleId = null;
+    });
+
+    final url = Uri.parse(
+      "http://localhost:3000/api/schedules/by-user/${widget.teacherId}/year/$selectedYearId",
+    );
+
+    print("📅 Cargando horarios para teacherId=${widget.teacherId}, yearId=$selectedYearId");
+
+    final res = await http.get(
+      url,
+      headers: {
+        "Authorization": "Bearer ${token ?? widget.token}",
+        "Content-Type": "application/json",
+      },
+    );
+
+    if (res.statusCode == 200) {
+      final data = json.decode(res.body);
+      setState(() => schedules = data);
+      if (data.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("No se encontraron horarios para este año.")),
+        );
+      }
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error cargando horarios: ${res.body}")),
+      );
+    }
+
     setState(() => loadingSchedules = false);
-  }
-
-  Future<void> _loadSchoolDays() async {
-    setState(() => loadingDays = true);
-
-    final url = Uri.parse("http://localhost:3000/api/schoolDays/list");
-    final res = await http.get(url);
-    if (res.statusCode == 200) {
-      schoolDays = json.decode(res.body);
-    }
-    setState(() => loadingDays = false);
   }
 
   Future<void> _openAssistancesDialog() async {
@@ -76,7 +120,10 @@ class _AssistancesScreenState extends State<AssistancesScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Asistencias', style: TextStyle(fontSize: 15, color: Colors.white),),
+        title: Text(
+          "Asistencias - Docente ${widget.teacherId}",
+          style: const TextStyle(fontSize: 15, color: Colors.white),
+        ),
         automaticallyImplyLeading: false,
         backgroundColor: appColors[3],
       ),
@@ -172,7 +219,9 @@ class _AssistancesDialogState extends State<AssistancesDialog> {
     setState(() => loading = true);
 
     try {
-      final studentsRes = await http.get(Uri.parse("http://localhost:3000/api/studentEnrollments/list"));
+      final studentsRes = await http.get(
+        Uri.parse("http://localhost:3000/api/studentEnrollments/bySchedule/${widget.scheduleId}"),
+      );
       final assistancesRes = await http.get(Uri.parse(
         "http://localhost:3000/api/assistances/byScheduleAndDay?scheduleId=${widget.scheduleId}&schoolDayId=${widget.schoolDayId}",
       ));

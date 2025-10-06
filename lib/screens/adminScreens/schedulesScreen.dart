@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:schoolnet/screens/adminScreens/yearsScreen.dart';
 import 'package:schoolnet/utils/colors.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
@@ -39,6 +40,7 @@ class _SchedulesScreenState extends State<SchedulesScreen> {
   List<Map<String, dynamic>> schedulesList = [];
   Map<String,dynamic>? savedSchedules;
   int? idToEdit;
+  String? token;
 
   Future<void> saveSchedule() async {
     if(
@@ -60,7 +62,7 @@ class _SchedulesScreenState extends State<SchedulesScreen> {
       return;
     }
 
-    final url = Uri.parse('${apiUrl}api/schedules/create');
+    final url = Uri.parse('${generalUrl}api/schedules/create');
     try {
       final response = await http.post(
         url,
@@ -101,7 +103,7 @@ class _SchedulesScreenState extends State<SchedulesScreen> {
   }
 
   Future<void> getSchedules() async {
-    final url = Uri.parse('${apiUrl}api/schedules/list');
+    final url = Uri.parse('${generalUrl}api/schedules/list');
     try {
       final response = await http.get(url);
       if (response.statusCode == 200) {
@@ -145,7 +147,7 @@ class _SchedulesScreenState extends State<SchedulesScreen> {
       return;
     }
 
-    final url = Uri.parse('${apiUrl}api/schedules/update/$idToEdit');
+    final url = Uri.parse('${generalUrl}api/schedules/update/$idToEdit');
     try {
       final response = await http.put(
         url,
@@ -181,7 +183,7 @@ class _SchedulesScreenState extends State<SchedulesScreen> {
   }
 
   Future<void> deleteSchedule(int id) async {
-    final url = Uri.parse('${apiUrl}api/schedules/delete/$id');
+    final url = Uri.parse('${generalUrl}api/schedules/delete/$id');
     try {
       final response = await http.delete(url);
 
@@ -236,11 +238,11 @@ class _SchedulesScreenState extends State<SchedulesScreen> {
     setState(() {
       idToEdit = schedule['id'];
       idController.text = schedule['id'].toString();
-      teacherIdController.text = schedule['teachers']['id'].toString();
       yearIdController.text = schedule['years']['id'].toString();
       yearDisplayController.text = '${schedule['years']['id']} - ${schedule['years']['year']}';
       sectionIdController.text = schedule['sections']['id'].toString();
       sectionDisplayController.text = '${schedule['sections']['id']} - ${schedule['sections']['seccion']}';
+      teacherIdController.text = schedule['teachers']['id'].toString();
       teacherDisplayController.text = '${schedule['teachers']['id']} - ${schedule['teachers']['persons']['names']} ${schedule['teachers']['persons']['lastNames']}';
       courseIdController.text = schedule['courses']['id'].toString();
       courseDisplayController.text = '${schedule['courses']['id']} - ${schedule['courses']['course']}';
@@ -290,8 +292,15 @@ class _SchedulesScreenState extends State<SchedulesScreen> {
       onEdit: _handleEditSchedule,
       onDelete: deleteSchedule,
     );
+    loadTokenAndData();
   }
 
+  Future<void> loadTokenAndData() async {
+    final savedToken = await storage.read(key: "auth_token");
+    if (savedToken != null) {
+      setState(() => token = savedToken);
+    }
+  }
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -326,7 +335,7 @@ class _SchedulesScreenState extends State<SchedulesScreen> {
                                 hintText: "Seleccionar Docente",
                                 displayController: teacherDisplayController,
                                 idController: teacherIdController,
-                                onTap: () async => await showTeacherSelection(context, teacherIdController, teacherIdController),
+                                onTap: () async => await showTeacherSelection(context, teacherIdController, teacherDisplayController),
                               ),
                             ),
                             const SizedBox(width: 10),
@@ -347,7 +356,8 @@ class _SchedulesScreenState extends State<SchedulesScreen> {
                                 hintText: "Seleccionar Año",
                                 displayController: yearDisplayController,
                                 idController: yearIdController,
-                                onTap: () async => await showYearsSelection(context, yearIdController, yearDisplayController),
+                                token: token,
+                                onTap: () async => await showYearsSelection(context, yearIdController, yearDisplayController, token: token),
                               ),
                             ),
                             const SizedBox(width: 10),

@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:schoolnet/screens/teacherScreens/assistancesScreen.dart';
+import 'package:schoolnet/screens/teacherScreens/examsScreen.dart';
+import 'package:schoolnet/screens/teacherScreens/generalAverageScreen.dart';
 import 'package:schoolnet/screens/teacherScreens/qualificationsScreen.dart';
+import 'package:schoolnet/screens/teacherScreens/teachingBlockAveragesScreen.dart';
 import 'package:sidebarx/sidebarx.dart';
 
 const sidebarCanvasColor = Color(0xff3b7861); // Color de fondo del sidebar
@@ -9,22 +12,56 @@ const sidebarActionColor = Color(0xff204760); // Color para el borde del item se
 final sidebarDivider = Divider(color: Colors.white.withOpacity(0.3), height: 1); // Divisor sutil para sidebar
 
 class TeacherNavigationRail extends StatefulWidget {
-  const TeacherNavigationRail({super.key});
+  final Map<String, dynamic> teacher;
+  final String token;
+
+  const TeacherNavigationRail({
+    super.key,
+    required this.teacher,
+    required this.token,
+  });
 
   @override
   State<TeacherNavigationRail> createState() => _TeacherNavigationRailState();
 }
 
 class _TeacherNavigationRailState extends State<TeacherNavigationRail> {
-  final SidebarXController _controller = SidebarXController(selectedIndex: 0, extended: true);
+  late SidebarXController _controller;
 
-  final List<Widget> pages = [
-    AssistancesScreen(),
-    QualificationsScreen()
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _controller = SidebarXController(selectedIndex: 0, extended: true);
+  }
 
   @override
   Widget build(BuildContext context) {
+    final teacherId = widget.teacher['id'];
+    final teacherName = widget.teacher['name'];
+
+    final List<Widget> pages = [
+      AssistancesScreen(
+        teacherId: teacherId,
+        token: widget.token,
+      ),
+      QualificationsScreen(
+        teacherId: teacherId,
+        token: widget.token,
+      ),
+      ExamsScreen(
+        teacherId: teacherId,
+        token: widget.token,
+      ),
+      TeachingBlockAveragesScreen(
+        teacherId: teacherId,
+        token: widget.token,
+      ),
+      GeneralAverageScreen(
+        teacherId: teacherId,
+        token: widget.token,
+      ),
+    ];
+
     return Scaffold(
       body: Row(
         children: [
@@ -107,8 +144,11 @@ class _TeacherNavigationRailState extends State<TeacherNavigationRail> {
               );
             },
             items: const [
-              SidebarXItem(icon: Icons.check_box_outlined, label: 'Asistencia'),
-              SidebarXItem(icon: Icons.filter_list_sharp, label: 'Calificación'),
+              SidebarXItem(icon: Icons.front_hand_outlined, label: 'Asistencia'),
+              SidebarXItem(icon: Icons.numbers, label: 'Calificación'),
+              SidebarXItem(icon: Icons.library_books_sharp, label: 'Exámenes'),
+              SidebarXItem(icon: Icons.confirmation_num_outlined, label: 'Prom. Bloq. Lectivo'),
+              SidebarXItem(icon: Icons.check_box_outlined, label: 'Prom. General'),
             ],
           ),
           Expanded(

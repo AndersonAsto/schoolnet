@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:schoolnet/screens/adminScreens/yearsScreen.dart';
 import 'package:schoolnet/utils/colors.dart';
 import 'package:schoolnet/utils/customNotifications.dart';
 import 'package:schoolnet/utils/customTextFields.dart';
@@ -33,7 +34,7 @@ class _ParentAssignmentsScreenState extends State<ParentAssignmentsScreen> {
   int? idToEdit;
   List<Map<String, dynamic>> filteredParentAssignments = [];
   late _ParentAssignmentsDataSource _parentAssignmentsDataSource;
-
+  String? token;
   Future<void> saveParentAssignments() async {
     if(
     studentIdController.text.trim().isEmpty ||
@@ -49,7 +50,7 @@ class _ParentAssignmentsScreenState extends State<ParentAssignmentsScreen> {
       return;
     }
 
-    final url = Uri.parse('${apiUrl}api/representativeAssignments/create');
+    final url = Uri.parse('${generalUrl}api/representativeAssignments/create');
     try {
       final response = await http.post(
         url,
@@ -86,7 +87,7 @@ class _ParentAssignmentsScreenState extends State<ParentAssignmentsScreen> {
   }
 
   Future<void> getParentAssignments() async {
-    final url = Uri.parse('${apiUrl}api/representativeAssignments/list');
+    final url = Uri.parse('${generalUrl}api/representativeAssignments/list');
     try {
       final response = await http.get(url);
 
@@ -125,7 +126,7 @@ class _ParentAssignmentsScreenState extends State<ParentAssignmentsScreen> {
       return;
     }
 
-    final url = Uri.parse('${apiUrl}api/representativeAssignments/update/$idToEdit');
+    final url = Uri.parse('${generalUrl}api/representativeAssignments/update/$idToEdit');
     try {
       final response = await http.put(
         url,
@@ -157,7 +158,7 @@ class _ParentAssignmentsScreenState extends State<ParentAssignmentsScreen> {
   }
 
   Future<void> deleteParentAssignments(int id) async {
-    final url = Uri.parse('${apiUrl}api/representativeAssignments/delete/$id');
+    final url = Uri.parse('${generalUrl}api/representativeAssignments/delete/$id');
     try {
       final response = await http.delete(url);
 
@@ -242,8 +243,15 @@ class _ParentAssignmentsScreenState extends State<ParentAssignmentsScreen> {
       onEdit: _handleEditParentAssignments,
       onDelete: deleteParentAssignments,
     );
+    loadTokenAndData();
   }
 
+  Future<void> loadTokenAndData() async {
+    final savedToken = await storage.read(key: "auth_token");
+    if (savedToken != null) {
+      setState(() => token = savedToken);
+    }
+  }
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -295,9 +303,10 @@ class _ParentAssignmentsScreenState extends State<ParentAssignmentsScreen> {
                         const SizedBox(width: 10,),
                         Expanded(
                           child: SelectionField(
-                            onTap: () async => await showYearsSelection(context, yearIdController, yearDisplayController),
+                            onTap: () async => await showYearsSelection(context, yearIdController, yearDisplayController, token: token),
                             displayController: yearDisplayController,
                             idController: yearIdController,
+                            token: token,
                             hintText: "Seleccionar Año",
                           ),
                         ),

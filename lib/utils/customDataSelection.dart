@@ -1,3 +1,4 @@
+import 'package:schoolnet/services/apiService.dart';
 import 'package:schoolnet/utils/customNotifications.dart';
 import 'package:schoolnet/utils/colors.dart';
 import 'package:http/http.dart' as http;
@@ -9,6 +10,8 @@ Future<void> showGenericSelection({
   required String title,
   String? endpoint, // opcional
   List<Map<String, dynamic>>? localItems, // opcional
+  String? token, // opcional (para compatibilidad)
+  bool useApiService = false, // 👈 Nuevo flag
   required String Function(Map<String, dynamic>) displayTextBuilder,
   required Function(Map<String, dynamic>) onItemSelected,
 }) async {
@@ -19,20 +22,41 @@ Future<void> showGenericSelection({
       // Usar lista local directamente
       items = localItems;
     } else if (endpoint != null && endpoint.isNotEmpty) {
-      // Cargar datos desde API
-      final url = Uri.parse('$apiUrl$endpoint');
-      final response = await http.get(url);
+      // 🔑 Decidimos qué método usar
+      if (useApiService) {
+        final response = await ApiService.request(endpoint);
 
-      if (response.statusCode == 200) {
-        items = List<Map<String, dynamic>>.from(jsonDecode(response.body));
+        if (response.statusCode == 200) {
+          items = List<Map<String, dynamic>>.from(jsonDecode(response.body));
+        } else {
+          CustomNotifications.showNotification(
+            context,
+            "Error al cargar datos",
+            color: Colors.red,
+          );
+          debugPrint("Error al cargar $title: ${response.body}");
+          return;
+        }
       } else {
-        CustomNotifications.showNotification(
-          context,
-          "Error al cargar datos",
-          color: Colors.red,
+        final url = Uri.parse('$generalUrl$endpoint');
+        final response = await http.get(
+          url,
+          headers: token != null
+              ? {"Authorization": "Bearer $token"} // opcional
+              : {},
         );
-        debugPrint("Error al cargar $title: ${response.body}");
-        return;
+
+        if (response.statusCode == 200) {
+          items = List<Map<String, dynamic>>.from(jsonDecode(response.body));
+        } else {
+          CustomNotifications.showNotification(
+            context,
+            "Error al cargar datos",
+            color: Colors.red,
+          );
+          debugPrint("Error al cargar $title: ${response.body}");
+          return;
+        }
       }
     } else {
       // No hay fuente de datos
@@ -94,6 +118,64 @@ Future<void> showGenericSelection({
   }
 }
 
+
+Future<void> showYearsSelection(BuildContext context, TextEditingController idCtrl, TextEditingController displayCtrl, {String? token}) {
+  return showGenericSelection(
+    context: context,
+    token: token,
+    useApiService: true,
+    title: "Seleccionar Año",
+    endpoint: "api/years/list",
+    displayTextBuilder: (item) => "${item['id']} - ${item['year']}",
+    onItemSelected: (item) {
+      idCtrl.text = item['id'].toString();
+      displayCtrl.text = "${item['id']} - ${item['year']}";
+    },
+  );
+}
+
+class SelectionField extends StatelessWidget {
+  final String hintText;
+  final String? token;
+  final TextEditingController displayController;
+  final TextEditingController? idController;
+  final Future<void> Function() onTap;
+
+  const SelectionField({
+    super.key,
+    required this.hintText,
+    required this.displayController,
+    this.idController,
+    required this.onTap,
+    this.token,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 36,
+      child: GestureDetector(
+        onTap: onTap,
+        child: AbsorbPointer(
+          child: TextField(
+            style: const TextStyle(fontSize: 13),
+            decoration: InputDecoration(
+              hintText: hintText,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8.0),
+              ),
+              filled: true,
+              fillColor: Colors.grey[100],
+            ),
+            controller: displayController,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 Future<void> showGradeSelection(BuildContext context, TextEditingController idCtrl, TextEditingController displayCtrl) {
   return showGenericSelection(
     context: context,
@@ -129,19 +211,6 @@ Future<void> showSectionsSelection(BuildContext context, TextEditingController i
     onItemSelected: (item) {
       idCtrl.text = item['id'].toString();
       displayCtrl.text = "${item['id']} - ${item['seccion']}";
-    },
-  );
-}
-
-Future<void> showYearsSelection(BuildContext context, TextEditingController idCtrl, TextEditingController displayCtrl) {
-  return showGenericSelection(
-    context: context,
-    title: "Seleccionar Año",
-    endpoint: "api/years/list",
-    displayTextBuilder: (item) => "${item['id']} - ${item['year']}",
-    onItemSelected: (item) {
-      idCtrl.text = item['id'].toString();
-      displayCtrl.text = "${item['id']} - ${item['year']}";
     },
   );
 }
@@ -187,14 +256,14 @@ Future<void> showPersonsByRole(BuildContext context, TextEditingController idCtr
 
 Future<void> showPersonsForUsersSelection(BuildContext context, TextEditingController idCtrl, TextEditingController displayCtrl, {String? newRole}) {
   return showGenericSelection(
-      context: context,
-      endpoint: newRole != null && newRole.isNotEmpty ? "api/persons/byRole/$newRole": "api/persons/byPrivilegien",
-      title: "Seleccionar Persona",
-      displayTextBuilder: (item) => "${item['id']} - ${item['names']} ${item['lastNames']} (${item['role']})",
-      onItemSelected: (item) {
-        idCtrl.text = item['id'].toString();
-        displayCtrl.text = "${item['id']} - ${item['names']} ${item['lastNames']} (${item['role']})";
-      }
+    context: context,
+    endpoint: newRole != null && newRole.isNotEmpty ? "api/persons/byRole/$newRole": "api/persons/byPrivilegien",
+    title: "Seleccionar Persona",
+    displayTextBuilder: (item) => "${item['id']} - ${item['names']} ${item['lastNames']} (${item['role']})",
+    onItemSelected: (item) {
+      idCtrl.text = item['id'].toString();
+      displayCtrl.text = "${item['id']} - ${item['names']} ${item['lastNames']} (${item['role']})";
+    }
   );
 }
 
@@ -218,7 +287,6 @@ showPrivilegeSelection(
     },
   );
 }
-
 
 showDaySelection(BuildContext context, TextEditingController ctrl) {
   return showGenericSelection(
@@ -253,42 +321,4 @@ showRoleSelection(BuildContext context, TextEditingController ctrl) {
   );
 }
 
-class SelectionField extends StatelessWidget {
-  final String hintText;
-  final TextEditingController displayController;
-  final TextEditingController? idController;
-  final Future<void> Function() onTap;
 
-  const SelectionField({
-    super.key,
-    required this.hintText,
-    required this.displayController,
-    this.idController,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 36,
-      child: GestureDetector(
-        onTap: onTap,
-        child: AbsorbPointer(
-          child: TextField(
-            style: const TextStyle(fontSize: 13),
-            decoration: InputDecoration(
-              hintText: hintText,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8.0),
-              ),
-              filled: true,
-              fillColor: Colors.grey[100],
-            ),
-            controller: displayController,
-          ),
-        ),
-      ),
-    );
-  }
-}

@@ -36,7 +36,7 @@ class _GradesScreenState extends State<GradesScreen> {
       CustomNotifications.showNotification(context, "Estás editando un grado. Cancela la edición para guardar uno nuevo.", color: appColors[0]);
       return;
     }
-    final url = Uri.parse('${apiUrl}api/grades/create');
+    final url = Uri.parse('${generalUrl}api/grades/create');
     try {
       final response = await http.post(
         url,
@@ -67,7 +67,7 @@ class _GradesScreenState extends State<GradesScreen> {
   }
 
   Future<void> getGrades() async {
-    final url = Uri.parse('${apiUrl}api/grades/list');
+    final url = Uri.parse('${generalUrl}api/grades/list');
     try {
       final response = await http.get(url);
       if (response.statusCode == 200) {
@@ -101,7 +101,7 @@ class _GradesScreenState extends State<GradesScreen> {
       return;
     }
 
-    final url = Uri.parse('${apiUrl}api/grades/update/$idToEdit');
+    final url = Uri.parse('${generalUrl}api/grades/update/$idToEdit');
     try {
       final response = await http.put(
         url,
@@ -128,7 +128,7 @@ class _GradesScreenState extends State<GradesScreen> {
   }
 
   Future<void> deleteGrade(int id) async {
-    final url = Uri.parse('${apiUrl}api/grades/delete/$id');
+    final url = Uri.parse('${generalUrl}api/grades/delete/$id');
     try {
       final response = await http.delete(url);
 

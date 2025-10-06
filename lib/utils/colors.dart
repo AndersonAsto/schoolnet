@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-String apiUrl = 'http://localhost:3000/';
+String generalUrl = 'http://localhost:3000/';
 
 List <Color> appColors = [
   const Color(0xffc13e06),

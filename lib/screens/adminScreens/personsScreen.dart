@@ -52,7 +52,7 @@ class _PersonsScreenState extends State<PersonsScreen> {
       return;
     }
 
-    final url = Uri.parse('${apiUrl}api/persons/create');
+    final url = Uri.parse('${generalUrl}api/persons/create');
     try {
       final response = await http.post(
         url,
@@ -91,7 +91,7 @@ class _PersonsScreenState extends State<PersonsScreen> {
   }
 
   Future<void> getPersons() async {
-    final url = Uri.parse('${apiUrl}api/persons/list');
+    final url = Uri.parse('${generalUrl}api/persons/list');
     try {
       final response = await http.get(url);
 
@@ -133,7 +133,7 @@ class _PersonsScreenState extends State<PersonsScreen> {
       return;
     }
 
-    final url = Uri.parse('${apiUrl}api/persons/update/$idToEdit');
+    final url = Uri.parse('${generalUrl}api/persons/update/$idToEdit');
     try {
       final response = await http.put(
         url,
@@ -167,7 +167,7 @@ class _PersonsScreenState extends State<PersonsScreen> {
   }
 
   Future<void> deletePerson(int id) async {
-    final url = Uri.parse('${apiUrl}api/persons/delete/$id');
+    final url = Uri.parse('${generalUrl}api/persons/delete/$id');
     try {
       final response = await http.delete(url);
 

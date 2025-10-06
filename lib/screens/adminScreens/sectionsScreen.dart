@@ -42,7 +42,7 @@ class _SectionsScreensState extends State<SectionsScreens> {
           color: appColors[0]);
       return;
     }
-    final url = Uri.parse('${apiUrl}api/sections/create');
+    final url = Uri.parse('${generalUrl}api/sections/create');
     try {
       final response = await http.post(
         url,
@@ -76,7 +76,7 @@ class _SectionsScreensState extends State<SectionsScreens> {
   }
 
   Future<void> getSections() async {
-    final url = Uri.parse('${apiUrl}api/sections/list');
+    final url = Uri.parse('${generalUrl}api/sections/list');
     try {
       final response = await http.get(url);
       if (response.statusCode == 200) {
@@ -116,7 +116,7 @@ class _SectionsScreensState extends State<SectionsScreens> {
       return;
     }
 
-    final url = Uri.parse('${apiUrl}api/sections/update/$idToEdit');
+    final url = Uri.parse('${generalUrl}api/sections/update/$idToEdit');
     try {
       final response = await http.put(
         url,
@@ -147,7 +147,7 @@ class _SectionsScreensState extends State<SectionsScreens> {
   }
 
   Future<void> deleteSection(int id) async {
-    final url = Uri.parse('${apiUrl}api/sections/delete/$id');
+    final url = Uri.parse('${generalUrl}api/sections/delete/$id');
     try {
       final response = await http.delete(url);
 

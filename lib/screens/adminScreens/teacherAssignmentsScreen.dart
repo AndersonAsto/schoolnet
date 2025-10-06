@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:schoolnet/screens/adminScreens/yearsScreen.dart';
 import 'package:schoolnet/utils/colors.dart';
 import 'package:schoolnet/utils/customNotifications.dart';
 import 'package:schoolnet/utils/customTextFields.dart';
@@ -31,6 +32,7 @@ class _TeachersAssignmentsScreenState extends State<TeachersAssignmentsScreen> {
   bool _showPassword = false;
   List<Map<String, dynamic>> filteredTeachersAssignmentsList = [];
   late _UsersDataSource _teachersAssignmentsDataSource;
+  String? token;
 
   Future<void> saveTeacherAssignments() async {
     if(
@@ -46,7 +48,7 @@ class _TeachersAssignmentsScreenState extends State<TeachersAssignmentsScreen> {
       return;
     }
 
-    final url = Uri.parse('${apiUrl}api/teachersAssignments/create');
+    final url = Uri.parse('${generalUrl}api/teachersAssignments/create');
     try {
       final response = await http.post(
         url,
@@ -54,7 +56,7 @@ class _TeachersAssignmentsScreenState extends State<TeachersAssignmentsScreen> {
         body: jsonEncode({
           "personId": int.parse(personIdController.text),
           "yearId": int.parse(yearIdController.text),
-          "specialty": specialtyController.text
+          "courseId": specialtyController.text
         }),
       );
 
@@ -82,7 +84,7 @@ class _TeachersAssignmentsScreenState extends State<TeachersAssignmentsScreen> {
   }
 
   Future<void> getTeachersAssignments() async {
-    final url = Uri.parse('${apiUrl}api/teachersAssignments/list');
+    final url = Uri.parse('${generalUrl}api/teachersAssignments/list');
     try {
       final response = await http.get(url);
 
@@ -120,7 +122,7 @@ class _TeachersAssignmentsScreenState extends State<TeachersAssignmentsScreen> {
       return;
     }
 
-    final url = Uri.parse('${apiUrl}api/teachersAssignments/update/$idToEdit');
+    final url = Uri.parse('${generalUrl}api/teachersAssignments/update/$idToEdit');
     try {
       final response = await http.put(
         url,
@@ -128,7 +130,7 @@ class _TeachersAssignmentsScreenState extends State<TeachersAssignmentsScreen> {
         body: jsonEncode({
           "personId": int.parse(personIdController.text),
           "yearId": int.parse(yearIdController.text),
-          "specialty": specialtyController.text
+          "courseId": specialtyController.text
         }),
       );
 
@@ -151,7 +153,7 @@ class _TeachersAssignmentsScreenState extends State<TeachersAssignmentsScreen> {
   }
 
   Future<void> deleteUser(int id) async {
-    final url = Uri.parse('${apiUrl}api/teachersAssignments/delete/$id');
+    final url = Uri.parse('${generalUrl}api/teachersAssignments/delete/$id');
     try {
       final response = await http.delete(url);
 
@@ -202,7 +204,7 @@ class _TeachersAssignmentsScreenState extends State<TeachersAssignmentsScreen> {
       personDisplayController.text = '${user['persons']['id']} - ${user['persons']['names']} ${user['persons']['lastNames']}';
       yearIdController.text = user['years']['id'].toString();
       yearDisplayController.text = '${user['years']['id']} - ${user['years']['year']}';
-      specialtyController.text = user['specialty'];
+      specialtyController.text = user['courses']['id'];
       statusController.text = user['status'].toString();
       createdAtController.text = user['createdAt'].toString();
       updatedAtController.text = user['updatedAt'].toString();
@@ -233,7 +235,16 @@ class _TeachersAssignmentsScreenState extends State<TeachersAssignmentsScreen> {
       usersList: teachersAssignmentsList,
       onEdit: _handleEditUser,
       onDelete: deleteUser,
+
     );
+    loadTokenAndData();
+  }
+
+  Future<void> loadTokenAndData() async {
+    final savedToken = await storage.read(key: "auth_token");
+    if (savedToken != null) {
+      setState(() => token = savedToken);
+    }
   }
 
   @override
@@ -275,9 +286,10 @@ class _TeachersAssignmentsScreenState extends State<TeachersAssignmentsScreen> {
                         Expanded(
                           child: SelectionField(
                             hintText: "Seleccionar Año",
+                            token: token,
                             displayController: yearDisplayController,
                             idController: yearIdController,
-                            onTap: () async => await showYearsSelection(context, yearIdController, yearDisplayController),
+                            onTap: () async => await showYearsSelection(context, yearIdController, yearDisplayController, token: token),
                           ),
                         ),
                       ],
