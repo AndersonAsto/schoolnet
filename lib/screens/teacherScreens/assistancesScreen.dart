@@ -11,11 +11,7 @@ class AssistancesScreen extends StatefulWidget {
   final int teacherId;
   final String token;
 
-  const AssistancesScreen({
-    super.key,
-    required this.teacherId,
-    required this.token,
-  });
+  const AssistancesScreen({super.key, required this.teacherId, required this.token});
 
   @override
   State<AssistancesScreen> createState() => _AssistancesScreenState();
@@ -24,14 +20,11 @@ class AssistancesScreen extends StatefulWidget {
 class _AssistancesScreenState extends State<AssistancesScreen> {
   TextEditingController yearIdController = TextEditingController();
   TextEditingController yearDisplayController = TextEditingController();
-
   String? token;
   List schedules = [];
   List schoolDays = [];
-
   String? selectedScheduleId;
   String? selectedSchoolDayId;
-
   bool loadingSchedules = false;
   bool loadingDays = false;
 
@@ -69,7 +62,6 @@ class _AssistancesScreenState extends State<AssistancesScreen> {
     final url = Uri.parse(
       "http://localhost:3000/api/schedules/by-user/${widget.teacherId}/year/$selectedYearId",
     );
-
     print("📅 Cargando horarios para teacherId=${widget.teacherId}, yearId=$selectedYearId");
 
     final res = await http.get(
@@ -127,64 +119,163 @@ class _AssistancesScreenState extends State<AssistancesScreen> {
         automaticallyImplyLeading: false,
         backgroundColor: appColors[3],
       ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Row(
-              children: [
-                Expanded(
-                  child: SelectionField(
-                    hintText: "Seleccionar Año",
-                    displayController: yearDisplayController,
-                    idController: yearIdController,
-                    onTap: () async => await showYearsSelection(context, yearIdController, yearDisplayController),
-                  ),
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            // 🔹 Selección de Año Escolar
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: SelectionField(
+                hintText: "Seleccionar Año Escolar",
+                displayController: yearDisplayController,
+                idController: yearIdController,
+                token: token,
+                onTap: () async {
+                  await showYearsSelection(
+                    context,
+                    yearIdController,
+                    yearDisplayController,
+                    token: token,
+                  );
+                },
+              ),
+            ),
+            // 🔹 Botón para cargar los horarios según el año seleccionado
+            ElevatedButton.icon(
+              onPressed: _loadSchedulesByYear,
+              icon: const Icon(Icons.schedule),
+              label: const Text("Cargar Horarios del Año"),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: appColors[3],
+                foregroundColor: Colors.white,
+              ),
+            ),
+            const SizedBox(height: 15),
+            // 🔹 Dropdown de horarios
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: loadingSchedules
+                  ? const CircularProgressIndicator()
+                  : DropdownButtonFormField<String>(
+                decoration: const InputDecoration(labelText: "Horario"),
+                value: selectedScheduleId,
+                items: schedules.map<DropdownMenuItem<String>>((item) {
+                  return DropdownMenuItem<String>(
+                    value: item["id"].toString(),
+                    child: Text(
+                      "${item["weekday"]} - ${item["courses"]['course']} "
+                          "(${item["startTime"]} - ${item["endTime"]}) / "
+                          "${item["grades"]["grade"]} ${item["sections"]["seccion"]}",
+                    ),
+                  );
+                }).toList(),
+                onChanged: (val) => setState(() => selectedScheduleId = val),
+              ),
+            ),
+            const SizedBox(height: 15),
+            // 🔹 Botón para cargar los días lectivos
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: appColors[3],
+                  foregroundColor: Colors.white,
                 ),
-              ],
+                onPressed: () async {
+                  final selectedYearId = yearIdController.text.trim();
+                  if (selectedYearId.isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text("Seleccione primero un año")),
+                    );
+                    return;
+                  }
+
+                  setState(() {
+                    loadingDays = true;
+                    schoolDays = [];
+                    selectedSchoolDayId = null;
+                  });
+
+                  try {
+                    final url = Uri.parse(
+                        "http://localhost:3000/api/schoolDays/byYear/$selectedYearId");
+                    final res = await http.get(url, headers: {
+                      "Content-Type": "application/json",
+                    });
+                    if (res.statusCode == 200) {
+                      final data = json.decode(res.body);
+                      setState(() => schoolDays = data);
+                    }
+                  } catch (e) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text("Error al conectar: $e")),
+                    );
+                  } finally {
+                    setState(() => loadingDays = false);
+                  }
+                },
+                icon: const Icon(Icons.calendar_today),
+                label: const Text("Cargar Días Lectivos del Año"),
+              ),
             ),
-          ),
-          const SizedBox(height: 10),
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: loadingSchedules
-                ? const CircularProgressIndicator()
-                : DropdownButtonFormField<String>(
-              decoration: const InputDecoration(labelText: "Horario"),
-              value: selectedScheduleId,
-              items: schedules.map<DropdownMenuItem<String>>((item) {
-                return DropdownMenuItem<String>(
-                  value: item["id"].toString(),
-                  child: Text(
-                    "${item["weekday"]} (${item["startTime"]} - ${item["endTime"]})",
-                  ),
-                );
-              }).toList(),
-              onChanged: (val) => setState(() => selectedScheduleId = val),
+            // 🔹 Calendario
+            if (loadingDays) const CircularProgressIndicator()
+            else if (schoolDays.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Builder(
+                  builder: (context) {
+                    // Extraer el año del primer día lectivo
+                    final year = int.parse(
+                      schoolDays.first["teachingDay"].toString().substring(0, 4),
+                    );
+                    // Definir el rango del calendario según el año seleccionado
+                    final firstDay = DateTime(year, 1, 1);
+                    final lastDay = DateTime(year, 12, 31);
+                    // Enfocar el primer día lectivo disponible
+                    final focusedDay = DateTime.parse(schoolDays.first["teachingDay"]);
+                    return TableCalendar(
+                      firstDay: firstDay,
+                      lastDay: lastDay,
+                      focusedDay: focusedDay.isBefore(lastDay) ? focusedDay : lastDay,
+                      // ✅ Evita error
+                      calendarFormat: CalendarFormat.month,
+                      availableGestures: AvailableGestures.horizontalSwipe,
+                      onFormatChanged: (_) {}, // evita error por el botón de formato
+                      // 🔹 Habilitar solo los días lectivos
+                      enabledDayPredicate: (day) {
+                        final formatted = DateFormat('yyyy-MM-dd').format(day);
+                        return schoolDays.any((d) => d["teachingDay"].toString().startsWith(formatted));
+                      },
+                      // 🔹 Acción al seleccionar un día
+                      onDaySelected: (selectedDay, _) {
+                        final formatted = DateFormat('yyyy-MM-dd').format(selectedDay);
+                        final found = schoolDays.firstWhere(
+                              (d) => d["teachingDay"].toString().startsWith(formatted),
+                          orElse: () => {},
+                        );
+                        if (found.isNotEmpty) {
+                          setState(() {
+                            selectedSchoolDayId = found["id"].toString();
+                          });
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text("Día seleccionado: ${found["teachingDay"]}")),
+                          );
+                        }
+                      },
+                    );
+                  },
+                ),
+              ),
+            const SizedBox(height: 20),
+            // 🔹 Botón final para cargar asistencias
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: appColors[3]),
+              onPressed: _openAssistancesDialog,
+              child: const Text("Cargar Asistencias", style: TextStyle(color: Colors.white)),
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: loadingDays
-                ? const CircularProgressIndicator()
-                : DropdownButtonFormField<String>(
-              decoration: const InputDecoration(labelText: "Día lectivo"),
-              value: selectedSchoolDayId,
-              items: schoolDays.map<DropdownMenuItem<String>>((item) {
-                return DropdownMenuItem<String>(
-                  value: item["id"].toString(),
-                  child: Text(item["teachingDay"]),
-                );
-              }).toList(),
-              onChanged: (val) => setState(() => selectedSchoolDayId = val),
-            ),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: appColors[3]),
-            onPressed: _openAssistancesDialog,
-            child: const Text("Cargar asistencias", style: TextStyle(color: Colors.white)),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -240,7 +331,7 @@ class _AssistancesDialogState extends State<AssistancesDialog> {
             "studentId": e["id"],
             "name": "${e["persons"]["names"]} ${e["persons"]["lastNames"]}",
             "assistance": existing?["assistance"] ?? "P",
-            "assistanceDetail": existing?["assistanceDetail"] ?? ""
+            "assistanceDetail": existing?["assistanceDetail"] ?? "",
           };
         }).toList();
       }
@@ -267,7 +358,7 @@ class _AssistancesDialogState extends State<AssistancesDialog> {
         "schoolDayId": int.parse(widget.schoolDayId),
         "assistance": s["assistance"],
         "assistanceDetail": s["assistanceDetail"] ?? "",
-        "status": true
+        "status": true,
       };
     }).toList();
 
@@ -319,6 +410,7 @@ class _AssistancesDialogState extends State<AssistancesDialog> {
   @override
   Widget build(BuildContext context) {
     double screenWidth = MediaQuery.of(context).size.width;
+
     return AlertDialog(
       title: const Text("Registrar asistencias"),
       content: SizedBox(
