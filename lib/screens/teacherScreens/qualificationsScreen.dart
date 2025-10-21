@@ -25,12 +25,12 @@ class _QualificationsScreenState extends State<QualificationsScreen> {
   TextEditingController yearIdController = TextEditingController();
   TextEditingController yearDisplayController = TextEditingController();
 
-  String? token;
   List schedules = [];
   List schoolDays = [];
 
   String? selectedScheduleId;
   String? selectedSchoolDayId;
+  String? token;
 
   bool loadingSchedules = false;
   bool loadingDays = false;

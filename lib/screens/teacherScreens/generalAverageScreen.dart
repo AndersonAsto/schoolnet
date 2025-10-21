@@ -20,34 +20,32 @@ class GeneralAverageScreen extends StatefulWidget {
 }
 
 class _GeneralAverageScreenState extends State<GeneralAverageScreen> {
-  String? token;
-  List generalAverages = [];
-  bool loadingGeneralAverages = false;
   TextEditingController yearIdController = TextEditingController();
   TextEditingController yearDisplayController = TextEditingController();
   TextEditingController gradeAverageController = TextEditingController();
   TextEditingController examAverageController = TextEditingController();
   TextEditingController teachingBlockAverage = TextEditingController();
 
-  String? selectedExamType;
-  String? selectedStudentId;
-
+  List generalAverages = [];
   List schedules = [];
   List schoolDays = [];
   List studentExams = [];
-  bool loadingExams = false;
-  String? selectedScheduleId;
-  String? selectedSchoolDayId;
-
-  bool loadingSchedules = false;
-  bool loadingDays = false;
   List teachingBlocks = [];
   List students = [];
 
   String? selectedTeachingBlockId;
+  String? selectedScheduleId;
+  String? selectedSchoolDayId;
+  String? selectedExamType;
+  String? selectedStudentId;
+  String? token;
+
+  bool loadingExams = false;
+  bool loadingGeneralAverages = false;
+  bool loadingSchedules = false;
+  bool loadingDays = false;
   bool loadingBlocks = false;
   bool loadingStudents = false;
-
   bool loadingTeachingBlocks = false;
 
   @override
@@ -380,7 +378,6 @@ class _GeneralAverageScreenState extends State<GeneralAverageScreen> {
                         }).toList(),
                       ),
                     ),
-
                   ],
                 ),
               )

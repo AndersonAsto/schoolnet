@@ -24,26 +24,25 @@ class _ExamsScreenState extends State<ExamsScreen> {
   TextEditingController yearDisplayController = TextEditingController();
   TextEditingController scoreController = TextEditingController();
   TextEditingController maxScoreController = TextEditingController();
-  String? selectedExamType;
-  String? selectedStudentId;
 
-  String? token;
   List schedules = [];
   List schoolDays = [];
   List studentExams = [];
-  bool loadingExams = false;
-  String? selectedScheduleId;
-  String? selectedSchoolDayId;
-
-  bool loadingSchedules = false;
-  bool loadingDays = false;
   List teachingBlocks = [];
   List students = [];
 
+  String? selectedScheduleId;
+  String? selectedSchoolDayId;
+  String? selectedExamType;
+  String? selectedStudentId;
   String? selectedTeachingBlockId;
+  String? token;
+
+  bool loadingSchedules = false;
+  bool loadingDays = false;
+  bool loadingExams = false;
   bool loadingBlocks = false;
   bool loadingStudents = false;
-
   bool loadingTeachingBlocks = false;
 
   @override

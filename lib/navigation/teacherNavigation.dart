@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:schoolnet/screens/teacherScreens/assistancesScreen.dart';
 import 'package:schoolnet/screens/teacherScreens/examsScreen.dart';
 import 'package:schoolnet/screens/teacherScreens/generalAverageScreen.dart';
+import 'package:schoolnet/screens/teacherScreens/incidentsScreen.dart';
 import 'package:schoolnet/screens/teacherScreens/qualificationsScreen.dart';
 import 'package:schoolnet/screens/teacherScreens/teachingBlockAveragesScreen.dart';
 import 'package:sidebarx/sidebarx.dart';
@@ -57,6 +58,10 @@ class _TeacherNavigationRailState extends State<TeacherNavigationRail> {
         token: widget.token,
       ),
       GeneralAverageScreen(
+        teacherId: teacherId,
+        token: widget.token,
+      ),
+      IncidentsScreen(
         teacherId: teacherId,
         token: widget.token,
       ),
@@ -149,6 +154,7 @@ class _TeacherNavigationRailState extends State<TeacherNavigationRail> {
               SidebarXItem(icon: Icons.library_books_sharp, label: 'Exámenes'),
               SidebarXItem(icon: Icons.confirmation_num_outlined, label: 'Prom. Bloq. Lectivo'),
               SidebarXItem(icon: Icons.check_box_outlined, label: 'Prom. General'),
+              SidebarXItem(icon: Icons.dangerous_outlined, label: 'Incidencias'),
             ],
           ),
           Expanded(

@@ -20,13 +20,16 @@ class AssistancesScreen extends StatefulWidget {
 class _AssistancesScreenState extends State<AssistancesScreen> {
   TextEditingController yearIdController = TextEditingController();
   TextEditingController yearDisplayController = TextEditingController();
+
   String? token;
-  List schedules = [];
-  List schoolDays = [];
   String? selectedScheduleId;
   String? selectedSchoolDayId;
+
   bool loadingSchedules = false;
   bool loadingDays = false;
+
+  List schedules = [];
+  List schoolDays = [];
 
   @override
   void initState() {
@@ -43,7 +46,6 @@ class _AssistancesScreenState extends State<AssistancesScreen> {
     }
   }
 
-  // 🧩 Nueva versión del método para cargar horarios por año
   Future<void> _loadSchedulesByYear() async {
     final selectedYearId = yearIdController.text.trim();
     if (selectedYearId.isEmpty) {
@@ -122,7 +124,6 @@ class _AssistancesScreenState extends State<AssistancesScreen> {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            // 🔹 Selección de Año Escolar
             Padding(
               padding: const EdgeInsets.all(8.0),
               child: SelectionField(
@@ -140,7 +141,7 @@ class _AssistancesScreenState extends State<AssistancesScreen> {
                 },
               ),
             ),
-            // 🔹 Botón para cargar los horarios según el año seleccionado
+            // 🔹  para cargar los horarios según el año seleccionado
             ElevatedButton.icon(
               onPressed: _loadSchedulesByYear,
               icon: const Icon(Icons.schedule),

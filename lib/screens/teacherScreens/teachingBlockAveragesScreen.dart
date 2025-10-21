@@ -28,24 +28,22 @@ class _TeachingBlockAveragesScreenState extends State<TeachingBlockAveragesScree
 
   String? selectedExamType;
   String? selectedStudentId;
-
   String? token;
+  String? selectedScheduleId;
+  String? selectedSchoolDayId;
+  String? selectedTeachingBlockId;
+
+  List teachingBlocks = [];
+  List students = [];
   List schedules = [];
   List schoolDays = [];
   List studentExams = [];
-  bool loadingExams = false;
-  String? selectedScheduleId;
-  String? selectedSchoolDayId;
 
+  bool loadingExams = false;
   bool loadingSchedules = false;
   bool loadingDays = false;
-  List teachingBlocks = [];
-  List students = [];
-
-  String? selectedTeachingBlockId;
   bool loadingBlocks = false;
   bool loadingStudents = false;
-
   bool loadingTeachingBlocks = false;
 
   @override

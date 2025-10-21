@@ -25,6 +25,8 @@ class _TeachersAssignmentsScreenState extends State<TeachersAssignmentsScreen> {
   TextEditingController personDisplayController = TextEditingController();
   TextEditingController yearDisplayController = TextEditingController();
   TextEditingController searchController = TextEditingController();
+  TextEditingController courseIdController = TextEditingController();
+  TextEditingController courseDisplayController = TextEditingController();
 
   Map<String,dynamic>? savedTeachersAssignments;
   List<Map<String, dynamic>> teachersAssignmentsList = [];
@@ -36,7 +38,7 @@ class _TeachersAssignmentsScreenState extends State<TeachersAssignmentsScreen> {
 
   Future<void> saveTeacherAssignments() async {
     if(
-        personIdController.text.trim().isEmpty ||
+    personIdController.text.trim().isEmpty ||
         yearIdController.text.trim().isEmpty
     ){
       CustomNotifications.showNotification(context, "Algunos campos aún están vacíos.", color: Colors.red);
@@ -48,6 +50,11 @@ class _TeachersAssignmentsScreenState extends State<TeachersAssignmentsScreen> {
       return;
     }
 
+    // LÓGICA CLAVE: Convertir la cadena vacía a null para que el backend lo reciba como NULL.
+    // Si el campo de selección está vacío, courseIdToSend será null.
+    final courseIdText = courseIdController.text.trim();
+    final courseIdToSend = courseIdText.isEmpty ? null : int.parse(courseIdText);
+
     final url = Uri.parse('${generalUrl}api/teachersAssignments/create');
     try {
       final response = await http.post(
@@ -56,7 +63,7 @@ class _TeachersAssignmentsScreenState extends State<TeachersAssignmentsScreen> {
         body: jsonEncode({
           "personId": int.parse(personIdController.text),
           "yearId": int.parse(yearIdController.text),
-          "courseId": specialtyController.text
+          "courseId": courseIdToSend, // <-- ¡USAR EL NUEVO VALOR!
         }),
       );
 
@@ -115,12 +122,16 @@ class _TeachersAssignmentsScreenState extends State<TeachersAssignmentsScreen> {
       return;
     }
     if(
-        personIdController.text.trim().isEmpty ||
+    personIdController.text.trim().isEmpty ||
         yearIdController.text.trim().isEmpty
     ){
       CustomNotifications.showNotification(context, "Algunos campos aún están vacíos.", color: Colors.red);
       return;
     }
+
+    // LÓGICA CLAVE: Convertir la cadena vacía a null para que el backend lo reciba como NULL.
+    final courseIdText = courseIdController.text.trim();
+    final courseIdToSend = courseIdText.isEmpty ? null : int.parse(courseIdText);
 
     final url = Uri.parse('${generalUrl}api/teachersAssignments/update/$idToEdit');
     try {
@@ -130,7 +141,7 @@ class _TeachersAssignmentsScreenState extends State<TeachersAssignmentsScreen> {
         body: jsonEncode({
           "personId": int.parse(personIdController.text),
           "yearId": int.parse(yearIdController.text),
-          "courseId": specialtyController.text
+          "courseId": courseIdToSend, // <-- ¡USAR EL NUEVO VALOR!
         }),
       );
 
@@ -181,6 +192,8 @@ class _TeachersAssignmentsScreenState extends State<TeachersAssignmentsScreen> {
     updatedAtController.clear();
     personDisplayController.clear();
     yearDisplayController.clear();
+    courseIdController.clear();
+    courseDisplayController.clear();
     filterUsers("");
   }
 
@@ -204,7 +217,18 @@ class _TeachersAssignmentsScreenState extends State<TeachersAssignmentsScreen> {
       personDisplayController.text = '${user['persons']['id']} - ${user['persons']['names']} ${user['persons']['lastNames']}';
       yearIdController.text = user['years']['id'].toString();
       yearDisplayController.text = '${user['years']['id']} - ${user['years']['year']}';
-      specialtyController.text = user['courses']['id'];
+
+      // NUEVA LÓGICA PARA EL CURSO
+      final courseData = user['courses'];
+      if (courseData != null) {
+        courseIdController.text = courseData['id'].toString(); // Asignar el ID
+        courseDisplayController.text = '${courseData['id']} - ${courseData['name']}'; // Asignar el nombre
+      } else {
+        courseIdController.clear();
+        courseDisplayController.clear();
+      }
+
+      specialtyController.text = user['specialty']?.toString() ?? ''; // Asumiendo que specialty es un campo diferente
       statusController.text = user['status'].toString();
       createdAtController.text = user['createdAt'].toString();
       updatedAtController.text = user['updatedAt'].toString();
@@ -295,7 +319,25 @@ class _TeachersAssignmentsScreenState extends State<TeachersAssignmentsScreen> {
                       ],
                     ),
                     const SizedBox(height: 10),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: SelectionField( // Asegúrate de que este widget maneje la selección y el endpoint
+                            hintText: "Seleccionar Curso (Opcional)",
+                            token: token,
+                            displayController: courseDisplayController,
+                            idController: courseIdController,
+                            // Usar el nuevo endpoint y una nueva función de selección
+                            onTap: () async => await showCourseSelection(context, courseIdController, courseDisplayController),
+                          ),
+                        ),
+                        // Puedes agregar otro campo aquí si quieres, o dejar este solo
+                      ],
+                    ),
+                    const SizedBox(height: 10),
                     CommonTimestampsFields(createdAtController: createdAtController, updatedAtController: updatedAtController),
+
                     const SizedBox(height: 20),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,

@@ -283,6 +283,26 @@ class _PersonsScreenState extends State<PersonsScreen> {
                   leading: const Icon(Icons.add_box),
                   childrenPadding: const EdgeInsets.all(16.0),
                   children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: CustomTextField(
+                            label: "Nombres",
+                            controller: nameController,
+                            keyboardType: TextInputType.text,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: CustomTextField(
+                            label: "Apellidos",
+                            controller: lastNameController,
+                            keyboardType: TextInputType.text,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
                     CustomTextField(
                       label: "Correo",
                       controller: emailController,
@@ -374,8 +394,8 @@ class _PersonsScreenState extends State<PersonsScreen> {
                       DataColumn(label: Text('Teléfono')),
                       DataColumn(label: Text('Correo')),
                       DataColumn(label: Text('Rol*')),
-                      DataColumn(label: Text('Estado')),
-                      DataColumn(label: Text('Creado')),
+                      //DataColumn(label: Text('Estado')),
+                      //DataColumn(label: Text('Creado')),
                       DataColumn(label: Text('Acciones')),
                     ],
                     source: _personsDataSource,
@@ -421,10 +441,14 @@ class _PersonsDataSource extends DataTableSource {
         DataCell(Text('${person['phone']}')),
         DataCell(Text('${person['email']}')),
         DataCell(Text('${person['role']}')),
-        DataCell(Text(person['status'] == true ? 'Activo' : 'Inactivo')),
-        DataCell(Text(person['createdAt'].toString())),
+        //DataCell(Text(person['status'] == true ? 'Activo' : 'Inactivo')),
+        //DataCell(Text(person['createdAt'].toString())),
         DataCell(Row(
           children: [
+            IconButton(
+              icon: Icon(Icons.info_outline, color: appColors[3]),
+              onPressed: () {},
+            ),
             IconButton(
               icon: const Icon(Icons.edit, color: Colors.blue),
               onPressed: () => onEdit(person),
