@@ -335,7 +335,7 @@ class _IncidentsScreenState extends State<IncidentsScreen> {
               items: schedules.map<DropdownMenuItem<String>>((item) {
                 return DropdownMenuItem<String>(
                   value: item["id"].toString(),
-                  child: Text("${item["courses"]["course"]} - ${item["grades"]["grade"]}${item["sections"]["seccion"]}"),
+                  child: Text("${item["courses"]["course"]} - ${item["grades"]["grade"]} ${item["sections"]["seccion"]}"),
                 );
               }).toList(),
               onChanged: (val) async {

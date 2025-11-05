@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:schoolnet/screens/teacherScreens/annualAverageScreen.dart';
 import 'package:schoolnet/screens/teacherScreens/assistancesScreen.dart';
 import 'package:schoolnet/screens/teacherScreens/examsScreen.dart';
-import 'package:schoolnet/screens/teacherScreens/generalAverageScreen.dart';
+import 'package:schoolnet/screens/teacherScreens/overallCourseAverageScreen.dart';
 import 'package:schoolnet/screens/teacherScreens/incidentsScreen.dart';
 import 'package:schoolnet/screens/teacherScreens/qualificationsScreen.dart';
 import 'package:schoolnet/screens/teacherScreens/teachingBlockAveragesScreen.dart';
@@ -60,6 +61,10 @@ class _TeacherNavigationRailState extends State<TeacherNavigationRail> {
       GeneralAverageScreen(
         teacherId: teacherId,
         token: widget.token,
+      ),
+      AnnualAverageScreen(
+        teacherId: teacherId,
+        token: widget.token
       ),
       IncidentsScreen(
         teacherId: teacherId,
@@ -151,8 +156,9 @@ class _TeacherNavigationRailState extends State<TeacherNavigationRail> {
             items: const [
               SidebarXItem(icon: Icons.front_hand_outlined, label: 'Asistencia'),
               SidebarXItem(icon: Icons.numbers, label: 'Calificación'),
-              SidebarXItem(icon: Icons.library_books_sharp, label: 'Exámenes'),
+              SidebarXItem(icon: Icons.library_books_sharp, label: 'Evaluaciones'),
               SidebarXItem(icon: Icons.confirmation_num_outlined, label: 'Prom. Bloq. Lectivo'),
+              SidebarXItem(icon: Icons.book_outlined, label: 'Prom. Cursos'),
               SidebarXItem(icon: Icons.check_box_outlined, label: 'Prom. General'),
               SidebarXItem(icon: Icons.dangerous_outlined, label: 'Incidencias'),
             ],

@@ -23,7 +23,6 @@ class _ExamsScreenState extends State<ExamsScreen> {
   TextEditingController yearIdController = TextEditingController();
   TextEditingController yearDisplayController = TextEditingController();
   TextEditingController scoreController = TextEditingController();
-  TextEditingController maxScoreController = TextEditingController();
 
   List schedules = [];
   List schoolDays = [];
@@ -79,10 +78,9 @@ class _ExamsScreenState extends State<ExamsScreen> {
     });
 
     try {
-      // Peticiones en paralelo (más eficiente que hacerlas por separado)
       final responses = await Future.wait([
         http.get(
-          Uri.parse("http://localhost:3000/api/schedules/by-user/${widget.teacherId}/year/$selectedYearId"),
+          Uri.parse("http://localhost:3000/api/teacherGroups/by-user/${widget.teacherId}/by-year/$selectedYearId"),
           headers: {
             "Authorization": "Bearer ${token ?? widget.token}",
             "Content-Type": "application/json",
@@ -148,7 +146,7 @@ class _ExamsScreenState extends State<ExamsScreen> {
       students = [];
     });
 
-    final url = Uri.parse("http://localhost:3000/api/studentEnrollments/bySchedule/$selectedScheduleId");
+    final url = Uri.parse("http://localhost:3000/api/studentEnrollments/by-group/$selectedScheduleId");
 
     final res = await http.get(
       url,
@@ -180,7 +178,6 @@ class _ExamsScreenState extends State<ExamsScreen> {
         selectedScheduleId == null ||
         selectedTeachingBlockId == null ||
         scoreController.text.isEmpty ||
-        maxScoreController.text.isEmpty ||
         selectedExamType == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Todos los campos son obligatorios.")),
@@ -192,10 +189,9 @@ class _ExamsScreenState extends State<ExamsScreen> {
 
     final body = {
       "studentId": int.parse(selectedStudentId!),
-      "scheduleId": int.parse(selectedScheduleId!),
+      "assigmentId": int.parse(selectedScheduleId!),
       "teachingBlockId": int.parse(selectedTeachingBlockId!),
       "score": double.parse(scoreController.text),
-      "maxScore": double.parse(maxScoreController.text),
       "type": selectedExamType,
     };
 
@@ -215,12 +211,11 @@ class _ExamsScreenState extends State<ExamsScreen> {
           SnackBar(content: Text(data["message"] ?? "Examen registrado correctamente.")),
         );
 
-        // Limpiar campos después de registrar
+        await _loadExamsByStudent();
+
         setState(() {
           scoreController.clear();
-          maxScoreController.clear();
           selectedExamType = null;
-          selectedStudentId = null;
         });
       } else {
         final error = jsonDecode(res.body);
@@ -236,14 +231,19 @@ class _ExamsScreenState extends State<ExamsScreen> {
   }
 
   Future<void> _loadExamsByStudent() async {
-    if (selectedStudentId == null) return;
+    if (selectedStudentId == null || selectedScheduleId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Seleccione un estudiante y un grupo docente.")),
+      );
+      return;
+    }
 
     setState(() {
       loadingExams = true;
       studentExams = [];
     });
 
-    final url = Uri.parse("http://localhost:3000/api/exams/student/$selectedStudentId");
+    final url = Uri.parse("http://localhost:3000/api/exams/student/$selectedStudentId/group/$selectedScheduleId");
 
     try {
       final res = await http.get(
@@ -287,207 +287,241 @@ class _ExamsScreenState extends State<ExamsScreen> {
         backgroundColor: appColors[3],
       ),
       body: SingleChildScrollView(
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: SelectionField(
-                hintText: "Seleccionar Año Escolar",
-                displayController: yearDisplayController,
-                idController: yearIdController,
-                token: token,
-                onTap: () async {
-                  await showYearsSelection(
-                    context,
-                    yearIdController,
-                    yearDisplayController,
-                    token: token,
-                  );
-                },
-              ),
-            ),
-            ElevatedButton.icon(
-              onPressed: _loadYearData,
-              icon: const Icon(Icons.refresh),
-              label: const Text("Cargar Horarios y Bloques del Año"),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: appColors[3],
-                foregroundColor: Colors.white,
-              ),
-            ),
-            const SizedBox(height: 10),
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: loadingSchedules
-                  ? const CircularProgressIndicator()
-                  : DropdownButtonFormField<String>(
-                decoration: const InputDecoration(labelText: "Horario"),
-                value: selectedScheduleId,
-                items: schedules.map<DropdownMenuItem<String>>((item) {
-                  return DropdownMenuItem<String>(
-                    value: item["id"].toString(),
-                    child: Text(
-                      "${item["weekday"]} - ${item["courses"]['course']} "
-                          "(${item["startTime"]} - ${item["endTime"]}) / "
-                          "${item["grades"]["grade"]} ${item["sections"]["seccion"]}",
-                    ),
-                  );
-                }).toList(),
-                onChanged: (val) => setState(() => selectedScheduleId = val),
-              ),
-            ),
-            const SizedBox(height: 10),
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: loadingBlocks
-                  ? const CircularProgressIndicator()
-                  : DropdownButtonFormField<String>(
-                decoration: const InputDecoration(labelText: "Bloque lectivo"),
-                value: selectedTeachingBlockId,
-                items: teachingBlocks.map<DropdownMenuItem<String>>((item) {
-                  return DropdownMenuItem<String>(
-                    value: item["id"].toString(),
-                    child: Text(item["blockName"] ?? "Bloque ${item["id"]}"),
-                  );
-                }).toList(),
-                onChanged: (val) => setState(() => selectedTeachingBlockId = val),
-              ),
-            ),
-            // Botón para cargar bloques lectivos
-
-            const SizedBox(height: 10,),
-            ElevatedButton.icon(
-              onPressed: _loadStudentsBySchedule,
-              icon: const Icon(Icons.people),
-              label: const Text("Cargar Estudiantes"),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: appColors[3],
-                foregroundColor: Colors.white,
-              ),
-            ),
-            const SizedBox(height: 10,),
-            if (selectedTeachingBlockId != null && students.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Divider(),
-                    const Text(
-                      "Registrar Calificación de Examen o Práctica",
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 10),
-
-                    // Seleccionar estudiante
-                    DropdownButtonFormField<String>(
-                      decoration: const InputDecoration(labelText: "Seleccionar Estudiante"),
-                      value: selectedStudentId,
-                      items: students.map<DropdownMenuItem<String>>((student) {
-                        final person = student["persons"];
-                        return DropdownMenuItem<String>(
-                          value: student["id"].toString(),
-                          child: Text("${person["names"]} ${person["lastNames"]}"),
+        child: Padding(
+          padding: const EdgeInsets.all(15),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Seleccionar año lectivo, cargar grupos y bloque lectivos
+              Row(
+                children: [
+                  Expanded(
+                    child: SelectionField(
+                      hintText: "Seleccionar Año Escolar",
+                      displayController: yearDisplayController,
+                      idController: yearIdController,
+                      token: token,
+                      onTap: () async {
+                        await showYearsSelection(
+                          context,
+                          yearIdController,
+                          yearDisplayController,
+                          token: token,
                         );
-                      }).toList(),
-                      onChanged: (val) {
-                        setState(() => selectedStudentId = val);
-                        _loadExamsByStudent();
                       },
                     ),
-
-                    const SizedBox(height: 10),
-
-                    // Tipo de examen
-                    DropdownButtonFormField<String>(
-                      decoration: const InputDecoration(labelText: "Tipo de Evaluación"),
-                      value: selectedExamType,
-                      items: const [
-                        DropdownMenuItem(value: "Práctica", child: Text("Práctica")),
-                        DropdownMenuItem(value: "Examen", child: Text("Examen")),
-                      ],
-                      onChanged: (val) => setState(() => selectedExamType = val),
-                    ),
-
-                    const SizedBox(height: 10),
-
-                    // Nota obtenida
-                    TextField(
-                      controller: scoreController,
-                      decoration: const InputDecoration(
-                        labelText: "Puntaje obtenido",
-                        border: OutlineInputBorder(),
-                      ),
-                      keyboardType: TextInputType.number,
-                    ),
-
-                    const SizedBox(height: 10),
-
-                    // Puntaje máximo
-                    TextField(
-                      controller: maxScoreController,
-                      decoration: const InputDecoration(
-                        labelText: "Puntaje máximo",
-                        border: OutlineInputBorder(),
-                      ),
-                      keyboardType: TextInputType.number,
-                    ),
-
-                    const SizedBox(height: 20),
-
-                    // Botón guardar
-                    ElevatedButton.icon(
-                      onPressed: _createExam,
-                      icon: const Icon(Icons.save),
-                      label: const Text("Guardar Examen"),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  ),
+                  const SizedBox(width: 15),
+                  ElevatedButton.icon(
+                    onPressed: _loadYearData,
+                    icon: const Icon(Icons.refresh, color: Colors.white),
+                    label: const Text("Cargar Horarios y Bloques del Año"),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: appColors[3],
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
                       ),
                     ),
-                    const SizedBox(height: 20),
-                    const Divider(),
-                    const Text(
-                      "Registros del Alumno",
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 15),
+              // Seleccionar grupo docente
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 0),
+                child: loadingSchedules
+                    ? const CircularProgressIndicator()
+                    : DropdownButtonFormField<String>(
+                  decoration: InputDecoration(
+                    labelText: "Grupo Docente",
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    const SizedBox(height: 10),
-
-                    if (loadingExams)
-                      const Center(child: CircularProgressIndicator())
-                    else if (studentExams.isEmpty)
-                      const Text("Sin registros de exámenes.")
-                    else
-                      SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: DataTable(
-                          columns: const [
-                            DataColumn(label: Text("Bloque")),
-                            DataColumn(label: Text("Tipo")),
-                            DataColumn(label: Text("Puntaje")),
-                            DataColumn(label: Text("Máximo")),
-                          ],
-                          rows: studentExams.map<DataRow>((exam) {
-                            final block = exam["teachingblocks"]?["teachingBlock"] ?? "—";
-                            final type = exam["type"] ?? "—";
-                            final score = exam["score"].toString();
-                            final maxScore = exam["maxScore"].toString();
-                            return DataRow(cells: [
-                              DataCell(Text(block)),
-                              DataCell(Text(type)),
-                              DataCell(Text(score)),
-                              DataCell(Text(maxScore)),
-                            ]);
-                          }).toList(),
-                        ),
-                      ),
-
-                  ],
+                    filled: true,
+                    fillColor: Colors.grey[100],
+                  ),
+                  value: selectedScheduleId,
+                  items: schedules.map<DropdownMenuItem<String>>((item) {
+                    final course = item["courses"]?["course"] ?? "Sin curso";
+                    final grade = item["grades"]?["grade"] ?? "—";
+                    final section = item["sections"]?["seccion"] ?? "—";
+                    return DropdownMenuItem<String>(
+                      value: item["id"].toString(),
+                      child: Text("$course - $grade $section"),
+                    );
+                  }).toList(),
+                  onChanged: (val) => setState(() => selectedScheduleId = val),
                 ),
               ),
-          ],
-        ),
+              const SizedBox(height: 15),
+              // Seleccionar bloque lectivo
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 0),
+                child: loadingBlocks
+                    ? const CircularProgressIndicator()
+                    : DropdownButtonFormField<String>(
+                  decoration: InputDecoration(
+                    labelText: "Bloque Lectivo",
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    filled: true,
+                    fillColor: Colors.grey[100],
+                  ),
+                  value: selectedTeachingBlockId,
+                  items: teachingBlocks.map<DropdownMenuItem<String>>((item) {
+                    return DropdownMenuItem<String>(
+                      value: item["id"].toString(),
+                      child: Text(item["teachingBlock"] ?? "Bloque ${item["id"]}"),
+                    );
+                  }).toList(),
+                  onChanged: (val) => setState(() => selectedTeachingBlockId = val),
+                ),
+              ),
+              const SizedBox(height: 15),
+              // Cargar estudiantes
+              ElevatedButton.icon(
+                onPressed: _loadStudentsBySchedule,
+                icon: const Icon(Icons.people, color: Colors.white,),
+                label: const Text("Cargar Estudiantes"),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: appColors[3],
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 15),
+              // Registrar calificación
+              if (selectedTeachingBlockId != null && students.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        "Registrar Calificación de Práctica o Examen",
+                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 15),
+                      // Seleccionar estudiante
+                      DropdownButtonFormField<String>(
+                        decoration: InputDecoration(
+                          labelText: "Seleccionar Estudiante",
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          filled: true,
+                          fillColor: Colors.grey[100],
+                        ),
+                        value: selectedStudentId,
+                        items: students.map<DropdownMenuItem<String>>((student) {
+                          final person = student["persons"];
+                          return DropdownMenuItem<String>(
+                            value: student["id"].toString(),
+                            child: Text("${person["names"]} ${person["lastNames"]}"),
+                          );
+                        }).toList(),
+                        onChanged: (val) {
+                          setState(() => selectedStudentId = val);
+                          _loadExamsByStudent();
+                        },
+                      ),
+                      const SizedBox(height: 15),
+                      // Tipo de evaluación
+                      DropdownButtonFormField<String>(
+                        decoration: InputDecoration(
+                          labelText: "Tipo de Evaluación",
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          filled: true,
+                          fillColor: Colors.grey[100],
+                        ),
+                        value: selectedExamType,
+                        items: const [
+                          DropdownMenuItem(value: "Práctica", child: Text("Práctica")),
+                          DropdownMenuItem(value: "Examen", child: Text("Examen")),
+                        ],
+                        onChanged: (val) => setState(() => selectedExamType = val),
+                      ),
+                      const SizedBox(height: 15),
+                      // Calificación obtenida
+                      TextField(
+                        controller: scoreController,
+                        decoration: InputDecoration(
+                          labelText: 'Calificación Obtenida',
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(
+                              width: 1,
+                              color: Colors.black,
+                            ),
+                          ),
+                        ),
+                        keyboardType: TextInputType.number,
+                      ),
+                      const SizedBox(height: 15),
+                      // Guardar evaluaciones
+                      Center(
+                        child: ElevatedButton.icon(
+                          onPressed: _createExam,
+                          icon: const Icon(Icons.save, color: Colors.white),
+                          label: const Text("Guardar Evaluación", style: TextStyle(color: Colors.white, fontSize: 12),),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: appColors[3],
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 15),
+                      // Ver evaluaciones
+                      const Text(
+                        "Evaluaciones del Estudiante",
+                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 15),
+                      if (loadingExams)
+                        const Center(child: CircularProgressIndicator())
+                      else if (studentExams.isEmpty)
+                        const Text("Sin registros de evaluaciones.")
+                      else
+                        SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: DataTable(
+                            columns: const [
+                              DataColumn(label: Text("Bloque")),
+                              DataColumn(label: Text("Tipo")),
+                              DataColumn(label: Text("Puntaje")),
+                            ],
+                            rows: studentExams.map<DataRow>((exam) {
+                              final block = exam["teachingblocks"]?["teachingBlock"] ?? "—";
+                              final type = exam["type"] ?? "—";
+                              final score = exam["score"].toString();
+                              final maxScore = exam["maxScore"].toString();
+                              return DataRow(cells: [
+                                DataCell(Text(block)),
+                                DataCell(Text(type)),
+                                DataCell(Text(score)),
+                              ]);
+                            }).toList(),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+        )
       ),
     );
   }

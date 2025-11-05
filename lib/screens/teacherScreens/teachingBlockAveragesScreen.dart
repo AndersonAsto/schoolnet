@@ -83,7 +83,7 @@ class _TeachingBlockAveragesScreenState extends State<TeachingBlockAveragesScree
       // Peticiones en paralelo (más eficiente que hacerlas por separado)
       final responses = await Future.wait([
         http.get(
-          Uri.parse("http://localhost:3000/api/schedules/by-user/${widget.teacherId}/year/$selectedYearId"),
+          Uri.parse("http://localhost:3000/api/teacherGroups/by-user/${widget.teacherId}/by-year/$selectedYearId"),
           headers: {
             "Authorization": "Bearer ${token ?? widget.token}",
             "Content-Type": "application/json",
@@ -149,7 +149,7 @@ class _TeachingBlockAveragesScreenState extends State<TeachingBlockAveragesScree
       students = [];
     });
 
-    final url = Uri.parse("http://localhost:3000/api/studentEnrollments/bySchedule/$selectedScheduleId");
+    final url = Uri.parse("http://localhost:3000/api/studentEnrollments/by-group/$selectedScheduleId");
 
     final res = await http.get(
       url,
@@ -184,7 +184,7 @@ class _TeachingBlockAveragesScreenState extends State<TeachingBlockAveragesScree
       studentExams = [];
     });
 
-    final url = Uri.parse("http://localhost:3000/api/exams/student/$selectedStudentId");
+    final url = Uri.parse("http://localhost:3000/api/exams/student/$selectedStudentId/group/$selectedScheduleId");
 
     try {
       final res = await http.get(
@@ -216,6 +216,91 @@ class _TeachingBlockAveragesScreenState extends State<TeachingBlockAveragesScree
     setState(() => loadingExams = false);
   }
 
+  Future<void> _generateTeachingBlockAverage() async {
+    if (selectedStudentId == null || selectedScheduleId == null || selectedTeachingBlockId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Seleccione estudiante, horario y bloque lectivo.")),
+      );
+      return;
+    }
+
+    final previewUrl = Uri.parse("http://localhost:3000/api/teachingblockaverage/preview");
+
+    try {
+      final res = await http.post(
+        previewUrl,
+        headers: {
+          "Authorization": "Bearer ${token ?? widget.token}",
+          "Content-Type": "application/json",
+        },
+        body: jsonEncode({
+          "studentId": int.parse(selectedStudentId!),
+          "assignmentId": int.parse(selectedScheduleId!),
+          "teachingBlockId": int.parse(selectedTeachingBlockId!),
+        }),
+      );
+
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        final record = data["data"];
+
+        // Mostrar el modal de confirmación con los resultados calculados
+        showDialog(
+          context: context,
+          builder: (ctx) => TeachingBlockConfirmDialog(
+            record: record,
+            onConfirm: () async {
+              await _saveTeachingBlockAverage(record);
+            },
+          ),
+        );
+      } else {
+        final error = jsonDecode(res.body);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Error: ${error["message"] ?? res.body}")),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error de conexión: $e")),
+      );
+    }
+  }
+
+  Future<void> _saveTeachingBlockAverage(Map<String, dynamic> record) async {
+    final saveUrl = Uri.parse("http://localhost:3000/api/teachingblockaverage/calculate");
+
+    try {
+      final res = await http.post(
+        saveUrl,
+        headers: {
+          "Authorization": "Bearer ${token ?? widget.token}",
+          "Content-Type": "application/json",
+        },
+        body: jsonEncode({
+          "studentId": int.parse(selectedStudentId!),
+          "assignmentId": int.parse(selectedScheduleId!),
+          "teachingBlockId": int.parse(selectedTeachingBlockId!),
+        }),
+      );
+
+      if (res.statusCode == 200) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("✅ Promedio guardado correctamente.")),
+        );
+      } else {
+        final error = jsonDecode(res.body);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Error al guardar: ${error["message"] ?? res.body}")),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error al conectar con el servidor: $e")),
+      );
+    }
+  }
+
   Future<void> _showStudentDailyRecordsModal() async {
     if (selectedStudentId == null || selectedScheduleId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -224,7 +309,6 @@ class _TeachingBlockAveragesScreenState extends State<TeachingBlockAveragesScree
       return;
     }
 
-    // 🔹 Primero: cargar datos antes de abrir el modal
     List qualifications = [];
     List assistances = [];
     List<Map<String, dynamic>> combinedRecords = [];
@@ -232,14 +316,16 @@ class _TeachingBlockAveragesScreenState extends State<TeachingBlockAveragesScree
     try {
       final responses = await Future.wait([
         http.get(
-          Uri.parse("http://localhost:3000/api/qualifications/byStudent/$selectedStudentId/schedule/$selectedScheduleId"),
+          Uri.parse(
+              "http://localhost:3000/api/qualifications/by-group/$selectedScheduleId/student/$selectedStudentId"),
           headers: {
             "Authorization": "Bearer ${token ?? widget.token}",
             "Content-Type": "application/json",
           },
         ),
         http.get(
-          Uri.parse("http://localhost:3000/api/assistances/byStudent/$selectedStudentId/schedule/$selectedScheduleId"),
+          Uri.parse(
+              "http://localhost:3000/api/assistances/by-group/$selectedScheduleId/student/$selectedStudentId"),
           headers: {
             "Authorization": "Bearer ${token ?? widget.token}",
             "Content-Type": "application/json",
@@ -274,7 +360,6 @@ class _TeachingBlockAveragesScreenState extends State<TeachingBlockAveragesScree
               qual["schooldays"]?["teachingDay"] ??
               "—",
           "asistencia": asis["assistance"] ?? "—",
-          // 🔹 CAMBIO AQUÍ: usamos 'rating' en lugar de 'score'
           "calificacion": qual["rating"]?.toString() ?? "—",
         };
       }).toList();
@@ -287,149 +372,23 @@ class _TeachingBlockAveragesScreenState extends State<TeachingBlockAveragesScree
       return;
     }
 
-    // 🔹 Luego: abrir el modal (ya con datos cargados)
     showDialog(
       context: context,
-      builder: (ctx) {
-        int currentPage = 0;
-        const int rowsPerPage = 25;
-
-        return AlertDialog(
-          title: const Text("Registros diarios del estudiante"),
-          content: SizedBox(
-            width: double.maxFinite,
-            child: combinedRecords.isEmpty
-                ? const Text("No se encontraron registros.")
-                : StatefulBuilder(
-              builder: (ctx, setState) {
-                final start = currentPage * rowsPerPage;
-                final end = (start + rowsPerPage > combinedRecords.length)
-                    ? combinedRecords.length
-                    : start + rowsPerPage;
-                final pageData = combinedRecords.sublist(start, end);
-
-                return Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Expanded(
-                      child: SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: DataTable(
-                          columns: const [
-                            DataColumn(label: Text("Fecha")),
-                            DataColumn(label: Text("Asistencia")),
-                            DataColumn(label: Text("Calificación")),
-                          ],
-                          rows: pageData.map((record) {
-                            return DataRow(cells: [
-                              DataCell(Text(record["fecha"].toString())),
-                              DataCell(Text(record["asistencia"].toString())),
-                              DataCell(Text(record["calificacion"].toString())),
-                            ]);
-                          }).toList(),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.arrow_back),
-                          onPressed: currentPage > 0
-                              ? () => setState(() => currentPage--)
-                              : null,
-                        ),
-                        Text(
-                          "Página ${currentPage + 1} de ${(combinedRecords.length / rowsPerPage).ceil()}",
-                          style: const TextStyle(fontSize: 13),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.arrow_forward),
-                          onPressed: end < combinedRecords.length
-                              ? () => setState(() => currentPage++)
-                              : null,
-                        ),
-                      ],
-                    ),
-                  ],
-                );
-              },
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text("Cerrar"),
-            ),
-          ],
-        );
-      },
+      builder: (_) => StudentDailyRecordsDialog(records: combinedRecords),
     );
   }
 
-  Future<void> _generateTeachingBlockAverage() async {
-    if (selectedStudentId == null || selectedScheduleId == null || selectedTeachingBlockId == null) {
+  Future<void> _showStudentExamsModal() async {
+    if (studentExams.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Seleccione estudiante, horario y bloque lectivo.")),
+        const SnackBar(content: Text("No hay registros de evaluaciones para este estudiante.")),
       );
       return;
     }
-
-    final url = Uri.parse("http://localhost:3000/api/teachingblockaverage/calculate");
-
-    try {
-      final res = await http.post(
-        url,
-        headers: {
-          "Authorization": "Bearer ${token ?? widget.token}",
-          "Content-Type": "application/json",
-        },
-        body: jsonEncode({
-          "studentId": int.parse(selectedStudentId!),
-          "scheduleId": int.parse(selectedScheduleId!),
-          "teachingBlockId": int.parse(selectedTeachingBlockId!),
-        }),
-      );
-
-      if (res.statusCode == 200) {
-        final data = jsonDecode(res.body);
-        final record = data["data"];
-
-        showDialog(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            title: const Text("✅ Promedio generado"),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text("Mensaje: ${data["message"]}"),
-                const SizedBox(height: 10),
-                Text("Promedio de prácticas: ${record["gradeAvarage"] ?? "—"}"),
-                Text("Promedio de exámenes: ${record["examAvarage"] ?? "—"}"),
-                Text("Promedio final de bloque: ${record["teachingblockavarage"] ?? "—"}"),
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: const Text("Cerrar"),
-              ),
-            ],
-          ),
-        );
-      } else {
-        final error = jsonDecode(res.body);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Error: ${error["message"] ?? res.body}")),
-        );
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error de conexión: $e")),
-      );
-    }
+    showDialog(
+      context: context,
+      builder: (_) => StudentExamsDialog(exams: studentExams.cast<Map<String, dynamic>>()),
+    );
   }
 
   @override
@@ -444,184 +403,438 @@ class _TeachingBlockAveragesScreenState extends State<TeachingBlockAveragesScree
         backgroundColor: appColors[3],
       ),
       body: SingleChildScrollView(
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: SelectionField(
-                hintText: "Seleccionar Año Escolar",
-                displayController: yearDisplayController,
-                idController: yearIdController,
-                token: token,
-                onTap: () async {
-                  await showYearsSelection(
-                    context,
-                    yearIdController,
-                    yearDisplayController,
-                    token: token,
-                  );
-                },
-              ),
-            ),
-            ElevatedButton.icon(
-              onPressed: _loadYearData,
-              icon: const Icon(Icons.refresh),
-              label: const Text("Cargar Horarios y Bloques del Año"),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: appColors[3],
-                foregroundColor: Colors.white,
-              ),
-            ),
-            const SizedBox(height: 10),
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: loadingSchedules
-                  ? const CircularProgressIndicator()
-                  : DropdownButtonFormField<String>(
-                decoration: const InputDecoration(labelText: "Horario"),
-                value: selectedScheduleId,
-                items: schedules.map<DropdownMenuItem<String>>((item) {
-                  return DropdownMenuItem<String>(
-                    value: item["id"].toString(),
-                    child: Text(
-                      "${item["weekday"]} - ${item["courses"]['course']} "
-                          "(${item["startTime"]} - ${item["endTime"]}) / "
-                          "${item["grades"]["grade"]} ${item["sections"]["seccion"]}",
-                    ),
-                  );
-                }).toList(),
-                onChanged: (val) => setState(() => selectedScheduleId = val),
-              ),
-            ),
-            const SizedBox(height: 10),
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: loadingBlocks
-                  ? const CircularProgressIndicator()
-                  : DropdownButtonFormField<String>(
-                decoration: const InputDecoration(labelText: "Bloque lectivo"),
-                value: selectedTeachingBlockId,
-                items: teachingBlocks.map<DropdownMenuItem<String>>((item) {
-                  return DropdownMenuItem<String>(
-                    value: item["id"].toString(),
-                    child: Text(item["blockName"] ?? "Bloque ${item["id"]}"),
-                  );
-                }).toList(),
-                onChanged: (val) => setState(() => selectedTeachingBlockId = val),
-              ),
-            ),
-            const SizedBox(height: 10,),
-
-            ElevatedButton.icon(
-              onPressed: _loadStudentsBySchedule,
-              icon: const Icon(Icons.people),
-              label: const Text("Cargar Estudiantes"),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: appColors[3],
-                foregroundColor: Colors.white,
-              ),
-            ),
-            const SizedBox(height: 10,),
-            if (selectedTeachingBlockId != null && students.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Divider(),
-                    const Text(
-                      "Registrar Calificación de Examen o Práctica",
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 10),
-                    // Seleccionar estudiante
-                    DropdownButtonFormField<String>(
-                      decoration: const InputDecoration(labelText: "Seleccionar Estudiante"),
-                      value: selectedStudentId,
-                      items: students.map<DropdownMenuItem<String>>((student) {
-                        final person = student["persons"];
-                        return DropdownMenuItem<String>(
-                          value: student["id"].toString(),
-                          child: Text("${person["names"]} ${person["lastNames"]}"),
+        child: Padding(
+          padding: const EdgeInsets.all(15),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Seleccionar año lectivo, cargar grupos y bloque lectivos
+              Row(
+                children: [
+                  Expanded(
+                    child: SelectionField(
+                      hintText: "Seleccionar Año Escolar",
+                      displayController: yearDisplayController,
+                      idController: yearIdController,
+                      token: token,
+                      onTap: () async {
+                        await showYearsSelection(
+                          context,
+                          yearIdController,
+                          yearDisplayController,
+                          token: token,
                         );
-                      }).toList(),
-                      onChanged: (val) {
-                        setState(() => selectedStudentId = val);
-                        _loadExamsByStudent();
                       },
                     ),
-                    const SizedBox(height: 10),
-                    ElevatedButton.icon(
-                      onPressed: _generateTeachingBlockAverage,
-                      icon: const Icon(Icons.calculate),
-                      label: const Text("Generar promedio"),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  ),
+                  const SizedBox(width: 15),
+                  ElevatedButton.icon(
+                    onPressed: _loadYearData,
+                    icon: const Icon(Icons.refresh, color: Colors.white,),
+                    label: const Text("Cargar Grupos y Bloques del Año"),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: appColors[3],
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
                       ),
                     ),
-
-                    Divider(),
-                    ElevatedButton.icon(
-                      onPressed: () {
-                        if (selectedScheduleId != null && selectedStudentId != null) {
-                          _showStudentDailyRecordsModal();
-                        } else {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text("Seleccione horario, día escolar y estudiante.")),
-                          );
-                        }
-                      },
-                      icon: const Icon(Icons.visibility),
-                      label: const Text("Ver calificación diaria"),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                      ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 15),
+              // Seleccionar grupo docente
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 0),
+                child: loadingSchedules
+                    ? const CircularProgressIndicator()
+                    : DropdownButtonFormField<String>(
+                  decoration: InputDecoration(
+                    labelText: "Grupo Docente",
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    const SizedBox(height: 20),
-                    const Divider(),
-                    const Text(
-                      "Registros del Alumno",
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 10),
-                    if (loadingExams)
-                      const Center(child: CircularProgressIndicator())
-                    else if (studentExams.isEmpty)
-                      const Text("Sin registros de exámenes.")
-                    else
-                      SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: DataTable(
-                          columns: const [
-                            DataColumn(label: Text("Bloque")),
-                            DataColumn(label: Text("Tipo")),
-                            DataColumn(label: Text("Puntaje")),
-                            DataColumn(label: Text("Máximo")),
-                          ],
-                          rows: studentExams.map<DataRow>((exam) {
-                            final block = exam["teachingblocks"]?["teachingBlock"] ?? "—";
-                            final type = exam["type"] ?? "—";
-                            final score = exam["score"].toString();
-                            final maxScore = exam["maxScore"].toString();
-                            return DataRow(cells: [
-                              DataCell(Text(block)),
-                              DataCell(Text(type)),
-                              DataCell(Text(score)),
-                              DataCell(Text(maxScore)),
-                            ]);
-                          }).toList(),
-                        ),
-                      ),
-                  ],
+                    filled: true,
+                    fillColor: Colors.grey[100],
+                  ),
+                  value: selectedScheduleId,
+                  items: schedules.map<DropdownMenuItem<String>>((item) {
+                    final course = item["courses"]?["course"] ?? "Sin curso";
+                    final grade = item["grades"]?["grade"] ?? "—";
+                    final section = item["sections"]?["seccion"] ?? "—";
+                    return DropdownMenuItem<String>(
+                      value: item["id"].toString(),
+                      child: Text("$course - $grade $section"),
+                    );
+                  }).toList(),
+                  onChanged: (val) => setState(() => selectedScheduleId = val),
                 ),
               ),
+              const SizedBox(height: 15),
+              // Seleccionar bloque lectivo
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 0),
+                child: loadingBlocks
+                    ? const CircularProgressIndicator()
+                    : DropdownButtonFormField<String>(
+                  decoration: InputDecoration(
+                    labelText: "Bloque Lectivo",
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    filled: true,
+                    fillColor: Colors.grey[100],
+                  ),
+                  value: selectedTeachingBlockId,
+                  items: teachingBlocks.map<DropdownMenuItem<String>>((item) {
+                    return DropdownMenuItem<String>(
+                      value: item["id"].toString(),
+                      child: Text(item["teachingBlock"] ?? "Bloque ${item["id"]}"),
+                    );
+                  }).toList(),
+                  onChanged: (val) => setState(() => selectedTeachingBlockId = val),
+                ),
+              ),
+              const SizedBox(height: 15),
+              // Cargar estudiantes
+              ElevatedButton.icon(
+                onPressed: _loadStudentsBySchedule,
+                icon: const Icon(Icons.people, color: Colors.white,),
+                label: const Text("Cargar Estudiantes"),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: appColors[3],
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 15),
+              // Seleccionar estudiante, generar promedios y ver calificaciones
+              if (selectedTeachingBlockId != null && students.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Divider(),
+                      // Seleccionar estudiante
+                      DropdownButtonFormField<String>(
+                        decoration: InputDecoration(
+                          labelText: "Seleccionar Estudiante",
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          filled: true,
+                          fillColor: Colors.grey[100],
+                        ),
+                        value: selectedStudentId,
+                        items: students.map<DropdownMenuItem<String>>((student) {
+                          final person = student["persons"];
+                          return DropdownMenuItem<String>(
+                            value: student["id"].toString(),
+                            child: Text("${person["names"]} ${person["lastNames"]}"),
+                          );
+                        }).toList(),
+                        onChanged: (val) {
+                          setState(() => selectedStudentId = val);
+                          _loadExamsByStudent();
+                        },
+                      ),
+                      const SizedBox(height: 15),
+                      // Generar/actualizar promedio
+                      Center(
+                        child: ElevatedButton.icon(
+                          onPressed: _generateTeachingBlockAverage,
+                          icon: const Icon(Icons.calculate, color: Colors.white,),
+                          label: const Text("Generar Promedio", style: TextStyle(color: Colors.white, fontSize: 12),),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: appColors[3],
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const Divider(),
+                      // Ver calificación diaria
+                      ElevatedButton.icon(
+                        onPressed: () {
+                          if (selectedScheduleId != null && selectedStudentId != null) {
+                            _showStudentDailyRecordsModal();
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text("Seleccione horario, día escolar y estudiante.")),
+                            );
+                          }
+                        },
+                        icon: const Icon(Icons.visibility, color: Colors.white,),
+                        label: const Text("Ver Calificación Diaria", style: TextStyle(color: Colors.white)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: appColors[9],
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                      ),
+                      const Divider(),
+                      // Ver calificación de evaluciones
+                      ElevatedButton.icon(
+                        onPressed: () {
+                          if (selectedStudentId != null) {
+                            _showStudentExamsModal();
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text("Seleccione un estudiante para ver sus evaluaciones.")),
+                            );
+                          }
+                        },
+                        icon: const Icon(Icons.visibility, color: Colors.white),
+                        label: const Text("Ver Calificación de Evaluaciones", style: TextStyle(color: Colors.white)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: appColors[9],
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class TeachingBlockConfirmDialog extends StatelessWidget {
+  final Map<String, dynamic> record;
+  final VoidCallback onConfirm;
+
+  const TeachingBlockConfirmDialog({
+    super.key,
+    required this.record,
+    required this.onConfirm,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Column(
+        mainAxisAlignment: MainAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.checklist, color: appColors[3]),
+              const SizedBox(width: 8),
+              const Text(
+                "Confirmar Promedio del Bloque",
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+          const Divider(),
+        ],
+      ),
+      content: Container(
+        width: 400,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(10),
+          color: Colors.grey.shade50,
+        ),
+        child: DataTable(
+          headingRowColor:
+          MaterialStateProperty.all(Colors.green.shade50),
+          columnSpacing: 20,
+          columns: const [
+            DataColumn(label: Text("Concepto", style: TextStyle(fontWeight: FontWeight.bold))),
+            DataColumn(label: Text("Valor", style: TextStyle(fontWeight: FontWeight.bold))),
+          ],
+          rows: [
+            DataRow(cells: [
+              const DataCell(Text("Promedio diario")),
+              DataCell(Text(record["dailyAvarage"]?.toString() ?? "—")),
+            ]),
+            DataRow(cells: [
+              const DataCell(Text("Promedio de prácticas")),
+              DataCell(Text(record["practiceAvarage"]?.toString() ?? "—")),
+            ]),
+            DataRow(cells: [
+              const DataCell(Text("Promedio de exámenes")),
+              DataCell(Text(record["examAvarage"]?.toString() ?? "—")),
+            ]),
+            DataRow(cells: [
+              const DataCell(Text("Promedio final de bloque")),
+              DataCell(Text(
+                record["teachingBlockAvarage"]?.toString() ?? "—",
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              )),
+            ]),
           ],
         ),
       ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text("Cancelar"),
+        ),
+        ElevatedButton.icon(
+          onPressed: () {
+            Navigator.pop(context);
+            onConfirm();
+          },
+          icon: const Icon(Icons.check, color: Colors.white,),
+          label: const Text("Confirmar"),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: appColors[3],
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class StudentDailyRecordsDialog extends StatelessWidget {
+  final List<Map<String, dynamic>> records;
+
+  const StudentDailyRecordsDialog({super.key, required this.records});
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Column(
+        mainAxisAlignment: MainAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.checklist, color: appColors[3]),
+              const SizedBox(width: 8),
+              const Text(
+                "Registros Diarios del Estudiante",
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+          const Divider(),
+        ],
+      ),
+      content: Container(
+        width: 700,
+        child: records.isEmpty
+            ? const Padding(
+          padding: EdgeInsets.all(15),
+          child: Text("No se encontraron registros."),
+        )
+            : SingleChildScrollView(
+          child: DataTable(
+            headingRowColor:
+            MaterialStateProperty.all(Colors.indigo.shade50),
+            columnSpacing: 16,
+            columns: const [
+              DataColumn(label: Text("Fecha")),
+              DataColumn(label: Text("Asistencia")),
+              DataColumn(label: Text("Calificación")),
+            ],
+            rows: records.map((r) {
+              final asistencia = r["asistencia"];
+              final calificacion = r["calificacion"];
+              return DataRow(cells: [
+                DataCell(Text(r["fecha"] ?? "—")),
+                DataCell(Text(asistencia)),
+                DataCell(Text(calificacion)),
+              ]);
+            }).toList(),
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text("Cerrar"),
+        ),
+      ],
+    );
+  }
+}
+
+class StudentExamsDialog extends StatelessWidget {
+  final List<Map<String, dynamic>> exams;
+
+  const StudentExamsDialog({super.key, required this.exams});
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Column(
+        mainAxisAlignment: MainAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.checklist, color: appColors[3]),
+              const SizedBox(width: 8),
+              const Text(
+                "Evaluciones del Estudiante",
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+          const Divider(),
+        ],
+      ),
+      content: Container(
+        width: 700,
+        child: exams.isEmpty
+            ? const Padding(
+          padding: EdgeInsets.all(15),
+          child: Text("No hay evaluaciones registradas."),
+        )
+            : SingleChildScrollView(
+          child: DataTable(
+            headingRowColor:
+            MaterialStateProperty.all(Colors.indigo.shade50),
+            columnSpacing: 16,
+            columns: const [
+              DataColumn(label: Text("Bloque")),
+              DataColumn(label: Text("Tipo")),
+              DataColumn(label: Text("Fecha")),
+              DataColumn(label: Text("Puntaje")),
+            ],
+            rows: exams.map((exam) {
+              final block = exam["teachingblocks"]?["teachingBlock"] ?? "—";
+              final type = exam["type"] ?? "—";
+              final date = exam["createdAt"]?.toString().split("T").first ?? "—";
+              final score = exam["score"]?.toString() ?? "—";
+              return DataRow(cells: [
+                DataCell(Text(block)),
+                DataCell(Text(type)),
+                DataCell(Text(date)),
+                DataCell(Text(score)),
+              ]);
+            }).toList(),
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text("Cerrar"),
+        ),
+      ],
     );
   }
 }

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:schoolnet/screens/adminScreens/yearsScreen.dart';
+import 'package:schoolnet/screens/teacherScreens/assistancesScreen.dart';
 import 'dart:convert';
 import 'package:schoolnet/utils/colors.dart';
 import 'package:schoolnet/utils/customDataSelection.dart';
@@ -24,6 +26,7 @@ class QualificationsScreen extends StatefulWidget {
 class _QualificationsScreenState extends State<QualificationsScreen> {
   TextEditingController yearIdController = TextEditingController();
   TextEditingController yearDisplayController = TextEditingController();
+  TextEditingController selectedDateController = TextEditingController();
 
   List schedules = [];
   List schoolDays = [];
@@ -122,97 +125,127 @@ class _QualificationsScreenState extends State<QualificationsScreen> {
         backgroundColor: appColors[3],
       ),
       body: SingleChildScrollView(
-        child: Column(
-          children: [
-            // 🔹 Selección de Año Escolar
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: SelectionField(
-                hintText: "Seleccionar Año Escolar",
-                displayController: yearDisplayController,
-                idController: yearIdController,
-                token: token,
-                onTap: () async {
-                  await showYearsSelection(
-                    context,
-                    yearIdController,
-                    yearDisplayController,
-                    token: token,
-                  );
-                },
-              ),
-            ),
-
-            // 🔹 Botón para cargar horarios
-            ElevatedButton.icon(
-              onPressed: _loadSchedulesByYear,
-              icon: const Icon(Icons.schedule),
-              label: const Text("Cargar Horarios del Año"),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: appColors[3],
-                foregroundColor: Colors.white,
-              ),
-            ),
-            const SizedBox(height: 15),
-
-            // 🔹 Dropdown de horarios
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: loadingSchedules
-                  ? const CircularProgressIndicator()
-                  : DropdownButtonFormField<String>(
-                decoration: const InputDecoration(labelText: "Horario"),
-                value: selectedScheduleId,
-                items: schedules.map<DropdownMenuItem<String>>((item) {
-                  return DropdownMenuItem<String>(
-                    value: item["id"].toString(),
-                    child: Text(
-                      "${item["weekday"]} - ${item["courses"]['course']} "
-                          "(${item["startTime"]} - ${item["endTime"]}) / "
-                          "${item["grades"]["grade"]} ${item["sections"]["seccion"]}",
+        child: Padding(
+          padding: const EdgeInsets.all(15),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Selección y carga de año escolar
+              Row(
+                children: [
+                  Expanded(
+                    child: SelectionField(
+                      hintText: "Seleccionar Año Escolar",
+                      displayController: yearDisplayController,
+                      idController: yearIdController,
+                      token: token,
+                      onTap: () async {
+                        await showYearsSelection(
+                          context,
+                          yearIdController,
+                          yearDisplayController,
+                          token: token,
+                        );
+                      },
                     ),
-                  );
-                }).toList(),
-                onChanged: (val) => setState(() => selectedScheduleId = val),
+                  ),
+                  const SizedBox(width: 15),
+                  ElevatedButton.icon(
+                    onPressed: _loadSchedulesByYear,
+                    icon: const Icon(Icons.schedule, color: Colors.white),
+                    label: const Text("Cargar"),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: appColors[3],
+                      foregroundColor: Colors.white,
+                      padding:
+                      const EdgeInsets.symmetric(vertical: 16, horizontal: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ),
-            const SizedBox(height: 15),
-
-            // 🔹 Botón para cargar días lectivos
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: ElevatedButton.icon(
+              const SizedBox(height: 15),
+              // Selección de horarios
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 0),
+                child: loadingSchedules
+                    ? const Center(child: CircularProgressIndicator())
+                    : DropdownButtonFormField<String>(
+                  decoration: InputDecoration(
+                    labelText: "Horario",
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    filled: true,
+                    fillColor: Colors.grey[100],
+                  ),
+                  value: selectedScheduleId,
+                  items: schedules.map<DropdownMenuItem<String>>((item) {
+                    return DropdownMenuItem<String>(
+                      value: item["id"].toString(),
+                      child: Text(
+                        "${item["weekday"]} - ${item["courses"]['course']} "
+                            "(${item["startTime"]} - ${item["endTime"]}) / "
+                            "${item["grades"]["grade"]} ${item["sections"]["seccion"]}",
+                      ),
+                    );
+                  }).toList(),
+                  onChanged: (val) => setState(() => selectedScheduleId = val),
+                ),
+              ),
+              const SizedBox(height: 15),
+              // Recargar días lectivos
+              ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: appColors[3],
                   foregroundColor: Colors.white,
+                  shape:
+                  RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 14),
                 ),
                 onPressed: () async {
-                  final selectedYearId = yearIdController.text.trim();
-
-                  if (selectedYearId.isEmpty) {
+                  if (selectedScheduleId == null) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text("Seleccione primero un año")),
+                      const SnackBar(content: Text("Seleccione primero un horario")),
                     );
                     return;
                   }
-
                   setState(() {
                     loadingDays = true;
                     schoolDays = [];
                     selectedSchoolDayId = null;
                   });
-
                   try {
                     final url = Uri.parse(
-                      "http://localhost:3000/api/schoolDays/byYear/$selectedYearId",
-                    );
+                        "http://localhost:3000/api/scheduleSDs/by-schedule/$selectedScheduleId");
                     final res = await http.get(url, headers: {
                       "Content-Type": "application/json",
                     });
-
                     if (res.statusCode == 200) {
                       final data = json.decode(res.body);
-                      setState(() => schoolDays = data);
+                      setState(() {
+                        schoolDays = data
+                            .map((d) => {
+                          "scheduleSchoolDayId": d["id"],
+                          "schoolDayId": d["schoolDays"]["id"],
+                          "teachingDay": d["schoolDays"]["teachingDay"],
+                          "weekday": d["schoolDays"]["weekday"],
+                        })
+                            .toList();
+                      });
+                      if (schoolDays.isNotEmpty) {
+                        selectedSchoolDayId =
+                            schoolDays.first["schoolDayId"].toString();
+                        selectedDateController.text =
+                        "${schoolDays.first["teachingDay"]} (${schoolDays.first["weekday"]})";
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                              content: Text("No se encontraron días lectivos.")),
+                        );
+                      }
                     }
                   } catch (e) {
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -222,68 +255,86 @@ class _QualificationsScreenState extends State<QualificationsScreen> {
                     setState(() => loadingDays = false);
                   }
                 },
-                icon: const Icon(Icons.calendar_today),
-                label: const Text("Cargar Días Lectivos del Año"),
+                icon: const Icon(Icons.refresh, color: Colors.white),
+                label: const Text("Recargar Días Lectivos del Año"),
               ),
-            ),
-            const SizedBox(height: 20),
-
-            // 🔹 Calendario
-            if (loadingDays)
-              const CircularProgressIndicator()
-            else if (schoolDays.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Builder(
-                  builder: (context) {
-                    final year = int.parse(
-                      schoolDays.first["teachingDay"].toString().substring(0, 4),
-                    );
-                    final firstDay = DateTime(year, 1, 1);
-                    final lastDay = DateTime(year, 12, 31);
-                    final focusedDay = DateTime.parse(schoolDays.first["teachingDay"]);
-
-                    return TableCalendar(
-                      firstDay: firstDay,
-                      lastDay: lastDay,
-                      focusedDay: focusedDay.isBefore(lastDay) ? focusedDay : lastDay,
-                      calendarFormat: CalendarFormat.month,
-                      availableGestures: AvailableGestures.horizontalSwipe,
-                      onFormatChanged: (_) {},
-                      enabledDayPredicate: (day) {
-                        final formatted = DateFormat('yyyy-MM-dd').format(day);
-                        return schoolDays.any(
-                              (d) => d["teachingDay"].toString().startsWith(formatted),
-                        );
-                      },
-                      onDaySelected: (selectedDay, _) {
-                        final formatted = DateFormat('yyyy-MM-dd').format(selectedDay);
-                        final found = schoolDays.firstWhere(
-                              (d) => d["teachingDay"].toString().startsWith(formatted),
-                          orElse: () => {},
-                        );
-
-                        if (found.isNotEmpty) {
-                          setState(() => selectedSchoolDayId = found["id"].toString());
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text("Día seleccionado: ${found["teachingDay"]}")),
+              const SizedBox(height: 15),
+              // Campo de día lectivo y calendario
+              if (selectedDateController.text.isNotEmpty)
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[100],
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Colors.black12,
+                        blurRadius: 4,
+                        offset: Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: selectedDateController,
+                          readOnly: true,
+                          decoration: const InputDecoration(
+                            labelText: "Día Lectivo Seleccionado",
+                            prefixIcon: Icon(Icons.date_range),
+                            border: InputBorder.none,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.edit_calendar, color: Colors.teal),
+                        onPressed: () async {
+                          if (schoolDays.isEmpty) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text("Primero recargue los días lectivos del año.")),
+                            );
+                            return;
+                          }
+                          final selectedDay = await showDialog<Map<String, dynamic>>(
+                            context: context,
+                            builder: (context) => SchoolDaysDialog(schoolDays: schoolDays),
                           );
-                        }
-                      },
-                    );
-                  },
+                          if (selectedDay != null && selectedDay.isNotEmpty) {
+                            setState(() {
+                              selectedSchoolDayId = selectedDay["schoolDayId"].toString();
+                              selectedDateController.text =
+                              "${selectedDay["teachingDay"]} (${selectedDay["weekday"]})";
+                            });
+                          }
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              const SizedBox(height: 15),
+              // Abrir registro de calificaciones
+              Center(
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: appColors[3],
+                    foregroundColor: Colors.white,
+                    padding:
+                    const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  onPressed: _openQualificationsDialog,
+                  icon: const Icon(Icons.checklist, color: Colors.white),
+                  label: const Text(
+                    "Cargar Calificaciones",
+                    style: TextStyle(fontSize: 12, color: Colors.white),
+                  ),
                 ),
               ),
-            const SizedBox(height: 20),
-
-            // 🔹 Botón para abrir diálogo de calificaciones
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: appColors[3]),
-              onPressed: _openQualificationsDialog,
-              child: const Text("Cargar Calificaciones",
-                  style: TextStyle(color: Colors.white)),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -439,51 +490,88 @@ class _QualificationsDialogState extends State<QualificationsDialog> {
   @override
   Widget build(BuildContext context) {
     double screenWidth = MediaQuery.of(context).size.width;
-
     return AlertDialog(
-      title: const Text("Registrar Calificaciones"),
+      title: Column(
+        mainAxisAlignment: MainAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.school, color: appColors[3]),
+              const SizedBox(width: 8),
+              const Text(
+                "Registro de Calificaciones",
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+              ),
+            ]
+          ),
+          const Divider(),
+        ],
+      ),
       content: SizedBox(
         width: screenWidth * 0.6,
+        height: 420,
         child: loading
             ? const Center(child: CircularProgressIndicator())
-            : ListView.builder(
-          shrinkWrap: true,
-          itemCount: students.length,
-          itemBuilder: (context, index) {
-            final student = students[index];
-            return ListTile(
-              title: Text(student["name"]),
-              subtitle: Row(
-                children: [
-                  // Estado de asistencia (solo lectura)
-                  Container(
-                    width: 40,
-                    alignment: Alignment.center,
-                    child: Text(student["assistance"]),
-                  ),
-                  const SizedBox(width: 10),
-                  // Campo de calificación editable
-                  SizedBox(
-                    width: 80,
-                    child: TextField(
-                      keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(
-                        hintText: "Nota",
+            : SingleChildScrollView(
+          child: DataTable(
+            headingRowColor: MaterialStateProperty.all(Colors.indigo.shade50),
+            dataRowHeight: 48,
+            horizontalMargin: 12,
+            columnSpacing: 10,
+            columns: const [
+              DataColumn(label: Text("N°", textAlign: TextAlign.center)),
+              DataColumn(label: Text("Estudiante", textAlign: TextAlign.center)),
+              DataColumn(label: Text("Asistencia", textAlign: TextAlign.center)),
+              DataColumn(label: Text("Nota", textAlign: TextAlign.center)),
+            ],
+            rows: List.generate(students.length, (index) {
+              final student = students[index];
+
+              return DataRow(
+                cells: [
+                  DataCell(Text("${index + 1}")),
+                  DataCell(Text(student["name"])),
+                  DataCell(Text(student["assistance"] ?? "P")),
+                  DataCell(
+                    SizedBox(
+                      width: 60,
+                      child: TextFormField(
+                        initialValue: student["rating"] ?? "",
+                        textAlign: TextAlign.center,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          isDense: true,
+                          contentPadding:
+                          EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+                          hintText: "0–20",
+                        ),
+                        onChanged: (value) {
+                          if (value.isEmpty) {
+                            _setRating(index, "");
+                            return;
+                          }
+
+                          final number = int.tryParse(value);
+                          if (number != null && number >= 0 && number <= 20) {
+                            _setRating(index, number.toString());
+                          }
+                        },
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly, // ✅ solo enteros
+                        ],
                       ),
-                      controller: TextEditingController(text: student["rating"]),
-                      onChanged: (val) => _setRating(index, val),
                     ),
                   ),
                 ],
-              ),
-            );
-          },
+              );
+            }),
+          ),
         ),
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text("Cancelar"),
+          child: Text("Cancelar", style: TextStyle(color: appColors[3])),
         ),
         ElevatedButton(
           onPressed: _saveQualifications,

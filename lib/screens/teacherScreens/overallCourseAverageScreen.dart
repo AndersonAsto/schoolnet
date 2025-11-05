@@ -90,7 +90,7 @@ class _GeneralAverageScreenState extends State<GeneralAverageScreen> {
       // Peticiones en paralelo (más eficiente)
       final responses = await Future.wait([
         http.get(
-          Uri.parse("http://localhost:3000/api/schedules/by-user/${widget.teacherId}/year/$selectedYearId"),
+          Uri.parse("http://localhost:3000/api/teacherGroups/by-user/${widget.teacherId}/by-year/$selectedYearId"),
           headers: {
             "Authorization": "Bearer ${token ?? widget.token}",
             "Content-Type": "application/json",
@@ -159,7 +159,7 @@ class _GeneralAverageScreenState extends State<GeneralAverageScreen> {
       generalAverages = [];
     });
 
-    final url = Uri.parse("http://localhost:3000/api/studentEnrollments/bySchedule/$selectedScheduleId");
+    final url = Uri.parse("http://localhost:3000/api/studentEnrollments/by-group/$selectedScheduleId");
 
     try {
       final res = await http.get(
@@ -194,14 +194,21 @@ class _GeneralAverageScreenState extends State<GeneralAverageScreen> {
   }
 
   Future<void> _fetchGeneralAverages() async {
-    if (selectedStudentId == null || selectedScheduleId == null || yearIdController.text.isEmpty) return;
+    if (selectedScheduleId == null || yearIdController.text.isEmpty) return;
 
     setState(() => loadingGeneralAverages = true);
 
-    final url = Uri.parse(
-      "http://localhost:3000/api/generalAvarage/byStudentYearAndSchedule"
-          "?studentId=$selectedStudentId&yearId=${yearIdController.text}&scheduleId=$selectedScheduleId",
-    );
+    Uri url;
+
+    if (selectedStudentId != null) {
+      url = Uri.parse(
+        "http://localhost:3000/api/generalAvarage/by-SYA?studentId=$selectedStudentId&yearId=${yearIdController.text}&assignmentId=$selectedScheduleId",
+      );
+    } else {
+      url = Uri.parse(
+        "http://localhost:3000/api/generalAvarage/by-assignment?yearId=${yearIdController.text}&assignmentId=$selectedScheduleId",
+      );
+    }
 
     try {
       final res = await http.get(url, headers: {
@@ -211,8 +218,6 @@ class _GeneralAverageScreenState extends State<GeneralAverageScreen> {
 
       if (res.statusCode == 200) {
         final decoded = json.decode(res.body);
-
-        // 🔥 Evita crash si no hay data (por ejemplo, alumno sin notas)
         final data = decoded["data"];
         setState(() => generalAverages = data is List ? data : []);
       } else {
@@ -232,7 +237,7 @@ class _GeneralAverageScreenState extends State<GeneralAverageScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          "Promedio General - Docente ${widget.teacherId}",
+          "Promedio General de Curso - Docente ${widget.teacherId}",
           style: const TextStyle(fontSize: 15, color: Colors.white),
         ),
         automaticallyImplyLeading: false,
@@ -274,18 +279,15 @@ class _GeneralAverageScreenState extends State<GeneralAverageScreen> {
               child: loadingSchedules
                   ? const CircularProgressIndicator()
                   : DropdownButtonFormField<String>(
-                decoration: const InputDecoration(labelText: "Horario"),
-                value: schedules.any((s) => s["id"].toString() == selectedScheduleId)
-                    ? selectedScheduleId
-                    : null,
+                decoration: const InputDecoration(labelText: "Grupo Docente"),
+                value: selectedScheduleId,
                 items: schedules.map<DropdownMenuItem<String>>((item) {
+                  final course = item["courses"]?["course"] ?? "Sin curso";
+                  final grade = item["grades"]?["grade"] ?? "—";
+                  final section = item["sections"]?["seccion"] ?? "—";
                   return DropdownMenuItem<String>(
                     value: item["id"].toString(),
-                    child: Text(
-                      "${item["weekday"]} - ${item["courses"]['course']} "
-                          "(${item["startTime"]} - ${item["endTime"]}) / "
-                          "${item["grades"]["grade"]} ${item["sections"]["seccion"]}",
-                    ),
+                    child: Text("$course - $grade $section"),
                   );
                 }).toList(),
                 onChanged: (val) async {
@@ -296,7 +298,15 @@ class _GeneralAverageScreenState extends State<GeneralAverageScreen> {
                     generalAverages = [];
                     loadingStudents = true;
                   });
-                  if (val != null) await _loadStudentsBySchedule();
+
+                  if (val != null) {
+                    await _loadStudentsBySchedule();
+
+                    // 🔹 Si hay año seleccionado, mostrar el promedio general del grupo
+                    if (yearIdController.text.isNotEmpty) {
+                      await _fetchGeneralAverages();
+                    }
+                  }
                 },
               ),
             ),
@@ -309,10 +319,16 @@ class _GeneralAverageScreenState extends State<GeneralAverageScreen> {
                   children: [
                     const Divider(),
                     DropdownButtonFormField<String>(
-                      decoration: const InputDecoration(labelText: "Seleccionar Estudiante"),
+                      decoration: const InputDecoration(
+                        labelText: "Seleccionar Estudiante",
+                        border: OutlineInputBorder(),
+                      ),
+                      // 🔹 Si el estudiante seleccionado ya no está en la lista, mostrar null
                       value: students.any((s) => s["id"].toString() == selectedStudentId)
                           ? selectedStudentId
                           : null,
+
+                      // 🔹 Lista desplegable de estudiantes
                       items: students.map<DropdownMenuItem<String>>((student) {
                         final person = student["persons"];
                         final studentName = "${person["names"]} ${person["lastNames"]}";
@@ -321,12 +337,23 @@ class _GeneralAverageScreenState extends State<GeneralAverageScreen> {
                           child: Text(studentName),
                         );
                       }).toList(),
+
+                      // 🔹 Cuando seleccionas un estudiante específico
                       onChanged: (val) async {
                         setState(() {
                           selectedStudentId = val;
                           generalAverages = [];
                         });
-                        if (val != null) await _fetchGeneralAverages();
+
+                        if (val != null) {
+                          // Si hay estudiante seleccionado → buscar por SYA
+                          await _fetchGeneralAverages();
+                        } else {
+                          // Si quitas la selección → buscar por grupo
+                          if (selectedScheduleId != null && yearIdController.text.isNotEmpty) {
+                            await _fetchGeneralAverages();
+                          }
+                        }
                       },
                     ),
                   ],
@@ -343,38 +370,63 @@ class _GeneralAverageScreenState extends State<GeneralAverageScreen> {
                   children: [
                     const Divider(),
                     const Text(
-                      "Promedios Generales Registrados",
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      "📊 Promedios Generales por Curso",
+                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 10),
                     SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
                       child: DataTable(
+                        headingRowColor: WidgetStateProperty.all(Colors.blueGrey.shade50),
+                        dataRowColor: WidgetStateProperty.resolveWith<Color?>(
+                              (Set<WidgetState> states) {
+                            if (states.contains(WidgetState.selected)) {
+                              return Theme.of(context).colorScheme.primary.withOpacity(0.08);
+                            }
+                            return null; // default
+                          },
+                        ),
+                        columnSpacing: 20,
                         columns: const [
-                          DataColumn(label: Text("Año")),
-                          DataColumn(label: Text("Curso")),
-                          DataColumn(label: Text("Estudiante")),
-                          DataColumn(label: Text("Grado y Sección")),
-                          DataColumn(label: Text("Promedio Anual")),
+                          DataColumn(label: Text("Año", style: TextStyle(fontWeight: FontWeight.bold))),
+                          DataColumn(label: Text("Curso", style: TextStyle(fontWeight: FontWeight.bold))),
+                          DataColumn(label: Text("Estudiante", style: TextStyle(fontWeight: FontWeight.bold))),
+                          DataColumn(label: Text("Grado y Sección", style: TextStyle(fontWeight: FontWeight.bold))),
+                          DataColumn(label: Text("Promedio Final", style: TextStyle(fontWeight: FontWeight.bold))),
                         ],
                         rows: generalAverages.map<DataRow>((avg) {
                           final student = avg["students"]?["persons"];
-                          final schedules = avg["schedules"];
-                          final course = schedules?["courses"]?["course"] ?? '—';
-                          final grade = schedules?["grades"]?["grade"] ?? '—';
-                          final section = schedules?["sections"]?["seccion"] ?? '—';
-                          final year = avg["years"]?["year"] ?? '—';
-                          final annualAvg = avg["annualAvarage"]?.toString() ?? '—';
+                          final teacherGroup = avg["teachergroups"];
+
+                          final course = teacherGroup?["courses"]?["course"] ?? '—';
+                          final grade = teacherGroup?["grades"]?["grade"] ?? '—';
+                          final section = teacherGroup?["sections"]?["seccion"] ?? '—';
+                          final year = avg["years"]?["year"]?.toString() ?? '—';
+                          final courseAverage = avg["courseAverage"]?.toString() ?? '—';
+
                           final names = student?["names"] ?? '—';
                           final lastNames = student?["lastNames"] ?? '';
+                          final fullName = "$names $lastNames".trim();
 
-                          return DataRow(cells: [
-                            DataCell(Text(year.toString())),
-                            DataCell(Text(course)),
-                            DataCell(Text("$names $lastNames")),
-                            DataCell(Text("$grade $section")),
-                            DataCell(Text(annualAvg)),
-                          ]);
+                          return DataRow(
+                            color: WidgetStateProperty.all(
+                              generalAverages.indexOf(avg) % 2 == 0
+                                  ? Colors.grey.shade50
+                                  : Colors.white,
+                            ),
+                            cells: [
+                              DataCell(Text(year, style: const TextStyle(fontSize: 13))),
+                              DataCell(Text(course, style: const TextStyle(fontSize: 13))),
+                              DataCell(Text(fullName, style: const TextStyle(fontSize: 13))),
+                              DataCell(Text("$grade $section", style: const TextStyle(fontSize: 13))),
+                              DataCell(
+                                Text(
+                                  double.tryParse(courseAverage)?.toStringAsFixed(2) ?? courseAverage,
+                                  style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.blueAccent),
+                                ),
+                              ),
+                            ],
+                          );
                         }).toList(),
                       ),
                     ),
@@ -397,7 +449,7 @@ class _GeneralAverageScreenState extends State<GeneralAverageScreen> {
                 }
 
                 final url = Uri.parse(
-                    "http://localhost:3000/api/teachingblockaverage/byStudent/$selectedStudentId/year/${yearIdController.text}/schedule/$selectedScheduleId"
+                    "http://localhost:3000/api/teachingblockaverage/byStudent/$selectedStudentId/year/${yearIdController.text}/assignment/$selectedScheduleId"
                 );
 
                 final res = await http.get(url, headers: {
@@ -442,7 +494,7 @@ class _GeneralAverageScreenState extends State<GeneralAverageScreen> {
           const Divider(),
           ...data.map((item) {
             final block = item["teachingblocks"]["teachingBlock"];
-            final avg = item["teachingblockavarage"];
+            final avg = item["teachingBlockAvarage"];
             return ListTile(
               title: Text(block),
               trailing: Text(avg.toString(), style: const TextStyle(fontWeight: FontWeight.bold)),
@@ -460,7 +512,7 @@ class _GeneralAverageScreenState extends State<GeneralAverageScreen> {
                 },
                 body: json.encode({
                   "studentId": selectedStudentId,
-                  "scheduleId": selectedScheduleId,
+                  "assignmentId": selectedScheduleId,
                   "yearId": yearIdController.text
                 }),
               );
