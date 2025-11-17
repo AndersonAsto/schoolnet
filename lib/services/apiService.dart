@@ -2,9 +2,9 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter/material.dart';
+import 'package:schoolnet/utils/colors.dart';
 
 class ApiService {
-  static const apiUrl = "http://localhost:3000/";
   static final storage = FlutterSecureStorage();
 
   static Future<String?> _getToken() async {
@@ -17,7 +17,7 @@ class ApiService {
 
     try {
       final response = await http.post(
-        Uri.parse("${apiUrl}api/auth/refresh"),
+        Uri.parse("${generalUrl}api/auth/refresh"),
         headers: {"Content-Type": "application/json"},
         body: json.encode({"refreshToken": refreshToken}),
       );
@@ -48,7 +48,7 @@ class ApiService {
     http.Response response;
 
     try {
-      final uri = Uri.parse("$apiUrl$endpoint");
+      final uri = Uri.parse("$generalUrl$endpoint");
 
       switch (method.toUpperCase()) {
         case "POST":

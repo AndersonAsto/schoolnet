@@ -5,6 +5,7 @@ import 'package:schoolnet/screens/adminScreens/yearsScreen.dart';
 import 'package:schoolnet/utils/colors.dart';
 import 'package:schoolnet/utils/customDataSelection.dart';
 import 'package:intl/intl.dart';
+import 'package:schoolnet/utils/customTextFields.dart';
 import 'package:table_calendar/table_calendar.dart';
 
 class AssistancesScreen extends StatefulWidget {
@@ -122,8 +123,10 @@ class _AssistancesScreenState extends State<AssistancesScreen> {
         automaticallyImplyLeading: false,
         backgroundColor: appColors[3],
       ),
-      body: SingleChildScrollView(
-        child: Padding(
+      body: SelectableRegion(
+        focusNode: FocusNode(),
+        selectionControls: materialTextSelectionControls,
+        child: SingleChildScrollView(
           padding: const EdgeInsets.all(15),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -133,7 +136,7 @@ class _AssistancesScreenState extends State<AssistancesScreen> {
                 children: [
                   Expanded(
                     child: SelectionField(
-                      hintText: "Seleccionar Año Escolar",
+                      labelText: "Seleccionar Año Escolar",
                       displayController: yearDisplayController,
                       idController: yearIdController,
                       token: token,
@@ -165,18 +168,14 @@ class _AssistancesScreenState extends State<AssistancesScreen> {
               ),
               const SizedBox(height: 15),
               // Selección de horarios
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 0),
-                child: loadingSchedules
-                    ? const Center(child: CircularProgressIndicator())
-                    : DropdownButtonFormField<String>(
+              CustomInputContainer(
+                child: DropdownButtonFormField<String>(
                   decoration: InputDecoration(
                     labelText: "Horario",
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+                    border: InputBorder.none,
                     filled: true,
                     fillColor: Colors.grey[100],
+                    prefixIcon: const Icon(Icons.schedule),
                   ),
                   value: selectedScheduleId,
                   items: schedules.map<DropdownMenuItem<String>>((item) {

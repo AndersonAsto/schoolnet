@@ -231,7 +231,10 @@ class _StudentEnrollmentsScreenState extends State<StudentEnrollmentsScreen> {
     final lowerQuery = query.toLowerCase();
     setState(() {
       filteredStudentEnrollments = studentEnrollmentsList.where((user) {
-        final nombre = '${user['persons']['names']} ${user['persons']['lastNames']} ${user['role']} ${user['userName']}'.toLowerCase();
+        final nombre = '${user['persons']['names']} '
+            '${user['persons']['lastNames']} ${user['grades']['grade'].toString()}'
+            '${user['sections']['seccion']}'
+            '${user['years']['year'].toString()}'.toLowerCase();
         return nombre.contains(lowerQuery);
       }).toList();
 
@@ -265,7 +268,7 @@ class _StudentEnrollmentsScreenState extends State<StudentEnrollmentsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Estudiantes+', style: TextStyle(fontSize: 15, color: Colors.white),),
+        title: const Text('Estudiantes', style: TextStyle(fontSize: 15, color: Colors.white),),
         automaticallyImplyLeading: false,
         backgroundColor: appColors[3],
       ),
@@ -273,16 +276,15 @@ class _StudentEnrollmentsScreenState extends State<StudentEnrollmentsScreen> {
         focusNode: FocusNode(),
         selectionControls: materialTextSelectionControls,
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(10),
+          padding: const EdgeInsets.all(15),
           child: Column(
             children: [
               Card(
-                margin: const EdgeInsets.only(bottom: 20),
                 child: ExpansionTile(
                   title: const Text('Registrar/Actualizar Estudiante'),
                   subtitle: const Text('Toca para abrir el formulario'),
                   leading: const Icon(Icons.add_box),
-                  childrenPadding: const EdgeInsets.all(16.0),
+                  childrenPadding: const EdgeInsets.all(15),
                   children: [
                     CommonInfoFields(idController: idController, statusController: statusController),
                     const SizedBox(height: 10),
@@ -290,7 +292,7 @@ class _StudentEnrollmentsScreenState extends State<StudentEnrollmentsScreen> {
                       children: [
                         Expanded(
                           child: SelectionField(
-                              hintText: "Seleccionar Estudiante",
+                              labelText: "Seleccionar Estudiante",
                               displayController: studentDisplayController,
                               idController: studentIdController,
                               onTap: () async => await showPersonsByRole(context, studentIdController, studentDisplayController, 'Estudiante')
@@ -299,7 +301,7 @@ class _StudentEnrollmentsScreenState extends State<StudentEnrollmentsScreen> {
                         const SizedBox(width: 10),
                         Expanded(
                           child: SelectionField(
-                            hintText: "Seleccionar Año",
+                            labelText: "Seleccionar Año",
                             displayController: yearDisplayController,
                             idController: yearIdController,
                             token: token,
@@ -313,7 +315,7 @@ class _StudentEnrollmentsScreenState extends State<StudentEnrollmentsScreen> {
                       children: [
                         Expanded(
                           child: SelectionField(
-                            hintText: "Seleccionar Grado",
+                            labelText: "Seleccionar Grado",
                             displayController: gradeDisplayController,
                             idController: gradeIdController,
                             onTap: () async => await showGradeSelection(context, gradeIdController, gradeDisplayController),
@@ -322,7 +324,7 @@ class _StudentEnrollmentsScreenState extends State<StudentEnrollmentsScreen> {
                         const SizedBox(width: 10),
                         Expanded(
                           child: SelectionField(
-                            hintText: "Seleccionar Sección",
+                            labelText: "Seleccionar Sección",
                             displayController: sectionDisplayController,
                             idController: sectionIdController,
                             onTap: () async => await showSectionsSelection(context, sectionIdController, sectionDisplayController),
@@ -332,31 +334,35 @@ class _StudentEnrollmentsScreenState extends State<StudentEnrollmentsScreen> {
                     ),
                     const SizedBox(height: 10),
                     CommonTimestampsFields(createdAtController: createdAtController, updatedAtController: updatedAtController),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 10),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
-                        IconButton(onPressed: saveStudentEnrollment, icon: Icon(Icons.save, color: appColors[3]),),
-                        IconButton(onPressed: cancelUpdate, icon: const Icon(Icons.clear_all, color: Colors.deepOrange)),
-                        IconButton(onPressed: updateStudentEnrollments, icon: Icon(Icons.update, color: appColors[8])),
+                        IconButton(onPressed: saveStudentEnrollment, icon: Icon(Icons.save, color: appColors[3]), tooltip: 'Guardar'),
+                        IconButton(onPressed: cancelUpdate, icon: const Icon(Icons.clear_all, color: Colors.deepOrange), tooltip: 'Cancelar Actualización'),
+                        IconButton(onPressed: updateStudentEnrollments, icon: Icon(Icons.update, color: appColors[8]), tooltip: 'Actualizar'),
                       ],
                     ),
                   ],
                 ),
               ),
-              const Divider(height: 20),
-              const Text("Asignaciones de Docentes", style: TextStyle(fontWeight: FontWeight.bold)),
-              const SizedBox(height: 20),
-              TextField(
-                controller: searchController,
-                decoration: const InputDecoration(
-                  labelText: 'Buscar por nombres o apellidos',
-                  prefixIcon: Icon(Icons.search),
-                  border: OutlineInputBorder(),
+              const SizedBox(height: 15),
+              const CustomTitleWidget(
+                child: Text('Estudiantes Registrados', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white)),
+              ),
+              const SizedBox(height: 15),
+              CustomInputContainer(
+                child: TextField(
+                  controller: searchController,
+                  decoration: const InputDecoration(
+                    labelText: 'Buscar',
+                    prefixIcon: Icon(Icons.search, color: Colors.teal),
+                    border: InputBorder.none,
+                  ),
+                  onChanged: (value) {
+                    filterUsers(value);
+                  },
                 ),
-                onChanged: (value) {
-                  filterUsers(value);
-                },
               ),
               const SizedBox(height: 20),
               SingleChildScrollView(
@@ -367,8 +373,10 @@ class _StudentEnrollmentsScreenState extends State<StudentEnrollmentsScreen> {
                       DataColumn(label: Text('ID')),
                       DataColumn(label: Text('(ID) Nombres y Apellidos')),
                       DataColumn(label: Text('(ID) Año')),
-                      DataColumn(label: Text('Estado')),
-                      DataColumn(label: Text('Creado')),
+                      DataColumn(label: Text('(ID) Grado')),
+                      DataColumn(label: Text('(ID) Sección')),
+                      //DataColumn(label: Text('Estado')),
+                      //DataColumn(label: Text('Creado')),
                       DataColumn(label: Text('Acciones')),
                     ],
                     source: _studentEnrollmentsDataSource,
@@ -411,17 +419,26 @@ class _StudentEnrollmentsDataSource extends DataTableSource {
         DataCell(Text(user['id'].toString())),
         DataCell(Text('(${user['persons']['id']}) ${user['persons']['names']} ${user['persons']['lastNames']}')),
         DataCell(Text('(${user['years']['id']}) ${user['years']['year']}')),
-        DataCell(Text(user['status'] == true ? 'Activo' : 'Inactivo')),
-        DataCell(Text(user['createdAt'].toString())),
+        DataCell(Text('(${user['grades']['id']}) ${user['grades']['grade']}')),
+        DataCell(Text('(${user['sections']['id']}) ${user['sections']['seccion']}')),
+        //DataCell(Text(user['status'] == true ? 'Activo' : 'Inactivo')),
+        //DataCell(Text(user['createdAt'].toString())),
         DataCell(Row(
           children: [
             IconButton(
-              icon: const Icon(Icons.edit, color: Colors.blue),
+              icon: Icon(Icons.info_outline, color: appColors[9]),
+              onPressed: () {},
+              tooltip: 'Más Información',
+            ),
+            IconButton(
+              icon: Icon(Icons.edit, color: appColors[3]),
               onPressed: () => onEdit(user),
+              tooltip: 'Editar Estudiante',
             ),
             IconButton(
               icon: const Icon(Icons.delete, color: Colors.red),
               onPressed: () => onDelete(user['id']),
+              tooltip: 'Eliminar Estudiante',
             ),
           ],
         )),

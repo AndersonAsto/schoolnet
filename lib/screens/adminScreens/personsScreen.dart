@@ -269,19 +269,15 @@ class _PersonsScreenState extends State<PersonsScreen> {
         focusNode: FocusNode(),
         selectionControls: materialTextSelectionControls,
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(10),
+          padding: const EdgeInsets.all(15),
           child: Column(
             children: [
               Card(
-                shape: const RoundedRectangleBorder(
-                  borderRadius: BorderRadius.all(Radius.circular(15)),
-                ),
-                margin: const EdgeInsets.only(bottom: 20),
                 child: ExpansionTile(
                   title: const Text('Registrar/Actualizar Persona'),
                   subtitle: const Text('Toca para abrir el formulario'),
                   leading: const Icon(Icons.add_box),
-                  childrenPadding: const EdgeInsets.all(16.0),
+                  childrenPadding: const EdgeInsets.all(15),
                   children: [
                     Row(
                       children: [
@@ -303,20 +299,22 @@ class _PersonsScreenState extends State<PersonsScreen> {
                       ],
                     ),
                     const SizedBox(height: 10),
-                    CustomTextField(
-                      label: "Correo",
-                      controller: emailController,
-                      keyboardType: TextInputType.emailAddress,
-                      inputFormatters: [
-                        FilteringTextInputFormatter.allow(RegExp(r"[a-zA-Z0-9@._-]")),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
                     Row(
                       children: [
                         Expanded(
+                          child: CustomTextField(
+                            label: "Correo",
+                            controller: emailController,
+                            keyboardType: TextInputType.emailAddress,
+                            inputFormatters: [
+                              FilteringTextInputFormatter.allow(RegExp(r"[a-zA-Z0-9@._-]")),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
                           child: SelectionField(
-                            hintText: "Seleccionar Rol",
+                            labelText: "Seleccionar Rol",
                             displayController: roleController,
                             onTap: () async => await showRoleSelection(context, roleController),
                           ),
@@ -353,36 +351,38 @@ class _PersonsScreenState extends State<PersonsScreen> {
                     ),
                     const SizedBox(height: 10),
                     CommonTimestampsFields(createdAtController: createdAtController, updatedAtController: updatedAtController),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 10),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
-                        IconButton(onPressed: savePerson, icon: Icon(Icons.save, color: appColors[3]),),
-                        IconButton(onPressed: cancelUpdate, icon: const Icon(Icons.clear_all, color: Colors.deepOrange)),
-                        IconButton(onPressed: updatePerson, icon: Icon(Icons.update, color: appColors[8])),
+                        IconButton(onPressed: savePerson, icon: Icon(Icons.save, color: appColors[3]), tooltip: 'Guardar'),
+                        IconButton(onPressed: cancelUpdate, icon: const Icon(Icons.clear_all, color: Colors.deepOrange), tooltip: 'Cancelar Actualización'),
+                        IconButton(onPressed: updatePerson, icon: Icon(Icons.update, color: appColors[8]), tooltip: 'Actualizar'),
                       ],
                     ),
                   ],
                 ),
               ),
               // Sección de la tabla de datos
-              const Divider(height: 20),
-              const Text("Personas Registradas", style: TextStyle(fontWeight: FontWeight.bold)),
-              const SizedBox(height: 20),
-              TextField(
-                controller: searchController,
-                decoration: InputDecoration(
-                  labelText: 'Buscar por nombre',
-                  prefixIcon: Icon(Icons.search, color: Colors.teal,),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                onChanged: (value) {
-                  filterPersons(value);
-                },
+              const SizedBox(height: 15),
+              const CustomTitleWidget(
+                child: Text('Personas Registradas', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white)),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 15),
+              CustomInputContainer(
+                child: TextField(
+                  controller: searchController,
+                  decoration: const InputDecoration(
+                    labelText: 'Buscar',
+                    prefixIcon: Icon(Icons.search, color: Colors.teal),
+                    border: InputBorder.none,
+                  ),
+                  onChanged: (value) {
+                    filterPersons(value);
+                  },
+                ),
+              ),
+              const SizedBox(height: 15),
               SingleChildScrollView(
                 child: ConstrainedBox(
                   constraints: BoxConstraints(minWidth: MediaQuery.of(context).size.width),
@@ -393,17 +393,17 @@ class _PersonsScreenState extends State<PersonsScreen> {
                       DataColumn(label: Text('DNI')),
                       DataColumn(label: Text('Teléfono')),
                       DataColumn(label: Text('Correo')),
-                      DataColumn(label: Text('Rol*')),
+                      DataColumn(label: Text('Rol')),
                       //DataColumn(label: Text('Estado')),
                       //DataColumn(label: Text('Creado')),
                       DataColumn(label: Text('Acciones')),
                     ],
                     source: _personsDataSource,
-                    rowsPerPage: 10,
+                    rowsPerPage: 25,
                     onPageChanged: (int page) {
                       print('Page changed to: $page');
                     },
-                    availableRowsPerPage: const [5, 10, 15, 20, 50],
+                    availableRowsPerPage: const [5, 15, 25, 35, 50],
                     showCheckboxColumn: false,
                   ),
                 ),
@@ -440,22 +440,25 @@ class _PersonsDataSource extends DataTableSource {
         DataCell(Text('${person['dni']}')),
         DataCell(Text('${person['phone']}')),
         DataCell(Text('${person['email']}')),
-        DataCell(Text('${person['role']}')),
+        DataCell(Text(person['role'] ?? '-')),
         //DataCell(Text(person['status'] == true ? 'Activo' : 'Inactivo')),
         //DataCell(Text(person['createdAt'].toString())),
         DataCell(Row(
           children: [
             IconButton(
-              icon: Icon(Icons.info_outline, color: appColors[3]),
+              icon: Icon(Icons.info_outline, color: appColors[9]),
               onPressed: () {},
+              tooltip: 'Más Información',
             ),
             IconButton(
-              icon: const Icon(Icons.edit, color: Colors.blue),
+              icon: Icon(Icons.edit, color: appColors[3]),
               onPressed: () => onEdit(person),
+              tooltip: 'Editar Datos',
             ),
             IconButton(
               icon: const Icon(Icons.delete, color: Colors.red),
               onPressed: () => onDelete(person['id']),
+              tooltip: 'Eliminar Datos',
             ),
           ],
         )),

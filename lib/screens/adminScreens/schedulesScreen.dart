@@ -36,9 +36,9 @@ class _SchedulesScreenState extends State<SchedulesScreen> {
   TextEditingController searchController = TextEditingController();
 
   List<Map<String, dynamic>> filteredSchedulesList = [];
-  late _SchedulesDataSource _schedulesDataSource;
   List<Map<String, dynamic>> schedulesList = [];
   Map<String,dynamic>? savedSchedules;
+  late _SchedulesDataSource _schedulesDataSource;
   int? idToEdit;
   String? token;
 
@@ -270,7 +270,9 @@ class _SchedulesScreenState extends State<SchedulesScreen> {
         filteredSchedulesList = schedulesList;
       } else {
         filteredSchedulesList = schedulesList.where((schedule) {
-          final fullName = '${schedule['teachers']['persons']['names']} ${schedule['teachers']['persons']['lastNames']} ${schedule['courses']['course']} ${schedule['grades']['grade']} ${schedule['weekday']} ${schedule['startTime']} ${schedule['endTime']}'.toLowerCase();
+          final fullName = '${schedule['years']['year'].toString()} ${schedule['teachers']['persons']['names']} ${schedule['teachers']['persons']['lastNames']} '
+              '${schedule['courses']['course']} ${schedule['grades']['grade'].toString()} ${schedule['sections']['seccion']}'
+              '${schedule['weekday']} ${schedule['startTime'].toString()} ${schedule['endTime'].toString()}'.toLowerCase();
           return fullName.contains(lowerQuery);
         }).toList();
       }
@@ -301,6 +303,7 @@ class _SchedulesScreenState extends State<SchedulesScreen> {
       setState(() => token = savedToken);
     }
   }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -313,16 +316,15 @@ class _SchedulesScreenState extends State<SchedulesScreen> {
         focusNode: FocusNode(),
         selectionControls: materialTextSelectionControls,
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(10),
+          padding: const EdgeInsets.all(15),
           child: Column(
             children: [
               Card(
-                margin: const EdgeInsets.only(bottom: 20),
                 child: ExpansionTile(
                   title: const Text('Registrar/Actualizar Horario'),
                   subtitle: const Text('Toca para abrir el formulario'),
                   leading: const Icon(Icons.add_box),
-                  childrenPadding: const EdgeInsets.all(16.0),
+                  childrenPadding: const EdgeInsets.all(15),
                   children: [
                     CommonInfoFields(idController: idController, statusController: statusController),
                     const SizedBox(height: 10),
@@ -332,7 +334,7 @@ class _SchedulesScreenState extends State<SchedulesScreen> {
                           children: [
                             Expanded(
                               child: SelectionField(
-                                hintText: "Seleccionar Docente",
+                                labelText: "Seleccionar Docente",
                                 displayController: teacherDisplayController,
                                 idController: teacherIdController,
                                 onTap: () async => await showTeacherSelection(context, teacherIdController, teacherDisplayController),
@@ -341,7 +343,7 @@ class _SchedulesScreenState extends State<SchedulesScreen> {
                             const SizedBox(width: 10),
                             Expanded(
                               child: SelectionField(
-                                hintText: "Seleccionar Día",
+                                labelText: "Seleccionar Día",
                                 displayController: weekdayController,
                                 onTap: () async => await showDaySelection(context, weekdayController),
                               ),
@@ -353,7 +355,7 @@ class _SchedulesScreenState extends State<SchedulesScreen> {
                           children: [
                             Expanded(
                               child: SelectionField(
-                                hintText: "Seleccionar Año",
+                                labelText: "Seleccionar Año",
                                 displayController: yearDisplayController,
                                 idController: yearIdController,
                                 token: token,
@@ -363,7 +365,7 @@ class _SchedulesScreenState extends State<SchedulesScreen> {
                             const SizedBox(width: 10),
                             Expanded(
                               child: SelectionField(
-                                hintText: "Seleccionar Sección",
+                                labelText: "Seleccionar Sección",
                                 displayController: sectionDisplayController,
                                 idController: sectionIdController,
                                 onTap: () async => await showSectionsSelection(context, sectionIdController, sectionDisplayController),
@@ -376,7 +378,7 @@ class _SchedulesScreenState extends State<SchedulesScreen> {
                           children: [
                             Expanded(
                               child: SelectionField(
-                                hintText: "Seleccionar Curso",
+                                labelText: "Seleccionar Curso",
                                 displayController: courseDisplayController,
                                 idController: courseIdController,
                                 onTap: () async => await showCourseSelection(context, courseIdController, courseDisplayController),
@@ -385,7 +387,7 @@ class _SchedulesScreenState extends State<SchedulesScreen> {
                             const SizedBox(width: 10),
                             Expanded(
                               child: SelectionField(
-                                hintText: "Seleccionar Grado",
+                                labelText: "Seleccionar Grado",
                                 displayController: gradeDisplayController,
                                 idController: gradeIdController,
                                 onTap: () async => await showGradeSelection(context, gradeIdController, gradeDisplayController),
@@ -405,13 +407,14 @@ class _SchedulesScreenState extends State<SchedulesScreen> {
                                 controller: startTimeController,
                                 readOnly: true,
                                 decoration: InputDecoration(
-                                  hintText: "Hora de Inicio",
-                                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(8.0),
-                                  ),
                                   filled: true,
                                   fillColor: Colors.grey[100],
+                                  labelText: 'Hora de Inicio',
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: const BorderSide(width: 1, color: Colors.black,),
+                                  ),
                                 ),
                                 style: const TextStyle(fontSize: 13),
                                 onTap: () async {
@@ -435,13 +438,14 @@ class _SchedulesScreenState extends State<SchedulesScreen> {
                               style: const TextStyle(fontSize: 13),
                               readOnly: true,
                               decoration: InputDecoration(
-                                hintText: "Hora de Finalización",
-                                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(8.0),
-                                ),
                                 filled: true,
                                 fillColor: Colors.grey[100],
+                                labelText: 'Hora de Finalización',
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: const BorderSide(width: 1, color: Colors.black,),
+                                ),
                               ),
                               onTap: () async {
                                 TimeOfDay? picked = await showTimePicker(
@@ -459,47 +463,53 @@ class _SchedulesScreenState extends State<SchedulesScreen> {
                     ),
                     const SizedBox(height: 10),
                     CommonTimestampsFields(createdAtController: createdAtController, updatedAtController: updatedAtController),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 10),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
-                        IconButton(onPressed: saveSchedule, icon: Icon(Icons.save, color: appColors[3]),),
-                        IconButton(onPressed: cancelUpdate, icon: const Icon(Icons.clear_all, color: Colors.deepOrange)),
-                        IconButton(onPressed: updateSchedule, icon: Icon(Icons.update, color: appColors[8])),
+                        IconButton(onPressed: saveSchedule, icon: Icon(Icons.save, color: appColors[3]), tooltip: 'Guardar'),
+                        IconButton(onPressed: cancelUpdate, icon: const Icon(Icons.clear_all, color: Colors.deepOrange), tooltip: 'Cancelar Actualización'),
+                        IconButton(onPressed: updateSchedule, icon: Icon(Icons.update, color: appColors[8]), tooltip: 'Actualizar'),
                       ],
                     ),
                   ],
                 ),
               ),
               // Sección de la tabla de datos
-              const Divider(height: 20),
-              const Text('Horarios Registrados', style: TextStyle(fontWeight: FontWeight.bold)),
-              const SizedBox(height: 20),
-              TextField(
-                controller: searchController,
-                decoration: const InputDecoration(
-                  labelText: 'Buscar por nombre',
-                  prefixIcon: Icon(Icons.search),
-                  border: OutlineInputBorder(),
-                ),
-                onChanged: (value) {
-                  filterSchedules(value);
-                },
+              const SizedBox(height: 15),
+              const CustomTitleWidget(
+                child: Text('Horarios Registrados', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white)),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 15),
+              CustomInputContainer(
+                child: TextField(
+                  controller: searchController,
+                  decoration: const InputDecoration(
+                    labelText: 'Buscar',
+                    prefixIcon: Icon(Icons.search, color: Colors.teal),
+                    border: InputBorder.none,
+                  ),
+                  onChanged: (value) {
+                    filterSchedules(value);
+                  },
+                ),
+              ),
+              const SizedBox(height: 15),
               SingleChildScrollView(
                 child: ConstrainedBox(
                   constraints: BoxConstraints(minWidth: MediaQuery.of(context).size.width),
                   child: PaginatedDataTable(
                     columns: const [
                       DataColumn(label: Text('ID')),
-                      DataColumn(label: Text('(ID) Docente')),
+                      DataColumn(label: Text('Año')),
+                      DataColumn(label: Text('Docente')),
                       DataColumn(label: Text('Curso')),
                       DataColumn(label: Text('Grado')),
+                      DataColumn(label: Text('Sección')),
                       DataColumn(label: Text('Día')),
                       DataColumn(label: Text('Hora Inicio')),
                       DataColumn(label: Text('Hora Fin')),
-                      DataColumn(label: Text('Estado')),
+                      //DataColumn(label: Text('Estado')),
                       DataColumn(label: Text('Acciones'))
                     ],
                     source: _schedulesDataSource,
@@ -542,22 +552,31 @@ class _SchedulesDataSource extends DataTableSource {
     return DataRow(
       cells: [
         DataCell(Text(schedule['id'].toString())),
+        DataCell(Text('(${schedule['years']['id']}) ${schedule['years']['year']}')),
         DataCell(Text('(${schedule['teachers']['id']}) ${schedule['teachers']['persons']['names']} ${schedule['teachers']['persons']['lastNames']}')),
         DataCell(Text('(${schedule['courses']['id']}) ${schedule['courses']['course']}')),
         DataCell(Text('(${schedule['grades']['id']}) ${schedule['grades']['grade']}')),
+        DataCell(Text('(${schedule['sections']['id']}) ${schedule['sections']['seccion']}')),
         DataCell(Text(schedule['weekday'])),
         DataCell(Text(schedule['startTime'])),
         DataCell(Text(schedule['endTime'])),
-        DataCell(Text(schedule['status'] == true ? 'Activo' : 'Inactivo')),
+        //DataCell(Text(schedule['status'] == true ? 'Activo' : 'Inactivo')),
         DataCell(Row(
           children: [
             IconButton(
-              icon: const Icon(Icons.edit, color: Colors.blue),
+              icon: Icon(Icons.info_outline, color: appColors[9]),
+              onPressed: () {},
+              tooltip: 'Más Información',
+            ),
+            IconButton(
+              icon: Icon(Icons.edit, color: appColors[3]),
               onPressed: () => onEdit(schedule),
+              tooltip: 'Editar Horario',
             ),
             IconButton(
               icon: const Icon(Icons.delete, color: Colors.red),
               onPressed: () => onDelete(schedule['id']),
+              tooltip: 'Eliminar Horario',
             ),
           ],
         )),

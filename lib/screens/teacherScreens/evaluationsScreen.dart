@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:schoolnet/screens/adminScreens/yearsScreen.dart';
 import 'package:schoolnet/utils/colors.dart';
 import 'package:schoolnet/utils/customDataSelection.dart';
+import 'package:schoolnet/utils/customTextFields.dart';
 
 class ExamsScreen extends StatefulWidget {
   final int teacherId;
@@ -230,20 +231,16 @@ class _ExamsScreenState extends State<ExamsScreen> {
     }
   }
 
-  Future<void> _loadExamsByStudent() async {
-    if (selectedStudentId == null || selectedScheduleId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Seleccione un estudiante y un grupo docente.")),
-      );
-      return;
-    }
+  Future<void> _loadGroupExams() async {
+    if (selectedScheduleId == null || selectedTeachingBlockId == null) return;
 
     setState(() {
       loadingExams = true;
       studentExams = [];
     });
 
-    final url = Uri.parse("http://localhost:3000/api/exams/student/$selectedStudentId/group/$selectedScheduleId");
+    final url = Uri.parse(
+        "http://localhost:3000/api/exams/block/$selectedTeachingBlockId/group/$selectedScheduleId");
 
     try {
       final res = await http.get(
@@ -256,14 +253,10 @@ class _ExamsScreenState extends State<ExamsScreen> {
 
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
-        if (data is Map && data.containsKey('exams')) {
-          setState(() => studentExams = data['exams']);
-        } else {
-          setState(() => studentExams = data);
-        }
+        setState(() => studentExams = data is Map ? data['exams'] ?? [] : data);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Error al obtener exámenes: ${res.body}")),
+          SnackBar(content: Text("Error al obtener evaluaciones: ${res.body}")),
         );
       }
     } catch (e) {
@@ -275,19 +268,49 @@ class _ExamsScreenState extends State<ExamsScreen> {
     setState(() => loadingExams = false);
   }
 
+  Future<void> _loadExamsByStudent() async {
+    if (selectedStudentId == null || selectedScheduleId == null) return;
+
+    setState(() {
+      loadingExams = true;
+      studentExams = [];
+    });
+
+    final url = Uri.parse(
+        "http://localhost:3000/api/exams/student/$selectedStudentId/group/$selectedScheduleId");
+
+    try {
+      final res = await http.get(
+        url,
+        headers: {
+          "Authorization": "Bearer ${token ?? widget.token}",
+          "Content-Type": "application/json",
+        },
+      );
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        setState(() => studentExams = data is Map ? data['exams'] ?? [] : data);
+      }
+    } finally {
+      setState(() => loadingExams = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          "Calificación de Exámenes - Docente ${widget.teacherId}",
+          "Calificación de Evaluación - Docente ${widget.teacherId}",
           style: const TextStyle(fontSize: 15, color: Colors.white),
         ),
         automaticallyImplyLeading: false,
         backgroundColor: appColors[3],
       ),
-      body: SingleChildScrollView(
-        child: Padding(
+      body: SelectableRegion(
+        focusNode: FocusNode(),
+        selectionControls: materialTextSelectionControls,
+        child: SingleChildScrollView(
           padding: const EdgeInsets.all(15),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -297,7 +320,7 @@ class _ExamsScreenState extends State<ExamsScreen> {
                 children: [
                   Expanded(
                     child: SelectionField(
-                      hintText: "Seleccionar Año Escolar",
+                      labelText: "Seleccionar Año Escolar",
                       displayController: yearDisplayController,
                       idController: yearIdController,
                       token: token,
@@ -315,7 +338,7 @@ class _ExamsScreenState extends State<ExamsScreen> {
                   ElevatedButton.icon(
                     onPressed: _loadYearData,
                     icon: const Icon(Icons.refresh, color: Colors.white),
-                    label: const Text("Cargar Horarios y Bloques del Año"),
+                    label: const Text("Cargar Grupos y Bloques del Año"),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: appColors[3],
                       foregroundColor: Colors.white,
@@ -329,18 +352,14 @@ class _ExamsScreenState extends State<ExamsScreen> {
               ),
               const SizedBox(height: 15),
               // Seleccionar grupo docente
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 0),
-                child: loadingSchedules
-                    ? const CircularProgressIndicator()
-                    : DropdownButtonFormField<String>(
+              CustomInputContainer(
+                child: DropdownButtonFormField<String>(
                   decoration: InputDecoration(
                     labelText: "Grupo Docente",
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+                    border: InputBorder.none,
                     filled: true,
                     fillColor: Colors.grey[100],
+                    prefixIcon: const Icon(Icons.groups),
                   ),
                   value: selectedScheduleId,
                   items: schedules.map<DropdownMenuItem<String>>((item) {
@@ -352,23 +371,22 @@ class _ExamsScreenState extends State<ExamsScreen> {
                       child: Text("$course - $grade $section"),
                     );
                   }).toList(),
-                  onChanged: (val) => setState(() => selectedScheduleId = val),
+                  onChanged: (val) {
+                    setState (() => selectedScheduleId = val);
+                    _loadGroupExams();
+                  }
                 ),
               ),
               const SizedBox(height: 15),
               // Seleccionar bloque lectivo
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 0),
-                child: loadingBlocks
-                    ? const CircularProgressIndicator()
-                    : DropdownButtonFormField<String>(
+              CustomInputContainer(
+                child: DropdownButtonFormField<String>(
                   decoration: InputDecoration(
                     labelText: "Bloque Lectivo",
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+                    border: InputBorder.none,
                     filled: true,
                     fillColor: Colors.grey[100],
+                    prefixIcon: const Icon(Icons.schedule),
                   ),
                   value: selectedTeachingBlockId,
                   items: teachingBlocks.map<DropdownMenuItem<String>>((item) {
@@ -377,7 +395,10 @@ class _ExamsScreenState extends State<ExamsScreen> {
                       child: Text(item["teachingBlock"] ?? "Bloque ${item["id"]}"),
                     );
                   }).toList(),
-                  onChanged: (val) => setState(() => selectedTeachingBlockId = val),
+                  onChanged: (val) {
+                    setState(() => selectedTeachingBlockId = val);
+                    _loadGroupExams();
+                  },
                 ),
               ),
               const SizedBox(height: 15),
@@ -397,26 +418,25 @@ class _ExamsScreenState extends State<ExamsScreen> {
               ),
               const SizedBox(height: 15),
               // Registrar calificación
-              if (selectedTeachingBlockId != null && students.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        "Registrar Calificación de Práctica o Examen",
-                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+              if (students.isNotEmpty)
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const CustomTitleWidget(
+                      child: Text("Registrar Calificación de Evaluación",
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white,),
                       ),
-                      const SizedBox(height: 15),
-                      // Seleccionar estudiante
-                      DropdownButtonFormField<String>(
+                    ),
+                    const SizedBox(height: 15),
+                    // Seleccionar estudiante
+                    CustomInputContainer(
+                      child: DropdownButtonFormField<String>(
                         decoration: InputDecoration(
                           labelText: "Seleccionar Estudiante",
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
+                          border: InputBorder.none,
                           filled: true,
                           fillColor: Colors.grey[100],
+                          prefixIcon: const Icon(Icons.person_search_outlined),
                         ),
                         value: selectedStudentId,
                         items: students.map<DropdownMenuItem<String>>((student) {
@@ -431,93 +451,109 @@ class _ExamsScreenState extends State<ExamsScreen> {
                           _loadExamsByStudent();
                         },
                       ),
-                      const SizedBox(height: 15),
-                      // Tipo de evaluación
-                      DropdownButtonFormField<String>(
-                        decoration: InputDecoration(
-                          labelText: "Tipo de Evaluación",
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          filled: true,
-                          fillColor: Colors.grey[100],
-                        ),
-                        value: selectedExamType,
-                        items: const [
-                          DropdownMenuItem(value: "Práctica", child: Text("Práctica")),
-                          DropdownMenuItem(value: "Examen", child: Text("Examen")),
-                        ],
-                        onChanged: (val) => setState(() => selectedExamType = val),
-                      ),
-                      const SizedBox(height: 15),
-                      // Calificación obtenida
-                      TextField(
-                        controller: scoreController,
-                        decoration: InputDecoration(
-                          labelText: 'Calificación Obtenida',
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(
-                              width: 1,
-                              color: Colors.black,
+                    ),
+                    const SizedBox(height: 15),
+                    Row(
+                      children: [
+                        // Tipo de evaluación
+                        Expanded(
+                          child: CustomInputContainer(
+                            child: DropdownButtonFormField<String>(
+                              decoration: InputDecoration(
+                                labelText: "Tipo de Evaluación",
+                                border: InputBorder.none,
+                                filled: true,
+                                fillColor: Colors.grey[100],
+                                prefixIcon: const Icon(Icons.check_box_outlined),
+                              ),
+                              value: selectedExamType,
+                              items: const [
+                                DropdownMenuItem(value: "Práctica", child: Text("Práctica")),
+                                DropdownMenuItem(value: "Examen", child: Text("Examen")),
+                              ],
+                              onChanged: (val) => setState(() => selectedExamType = val),
                             ),
                           ),
                         ),
-                        keyboardType: TextInputType.number,
-                      ),
-                      const SizedBox(height: 15),
-                      // Guardar evaluaciones
-                      Center(
-                        child: ElevatedButton.icon(
-                          onPressed: _createExam,
-                          icon: const Icon(Icons.save, color: Colors.white),
-                          label: const Text("Guardar Evaluación", style: TextStyle(color: Colors.white, fontSize: 12),),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: appColors[3],
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
+                        const SizedBox(width: 15),
+                        // Calificación obtenida
+                        Expanded(
+                          child: TextField(
+                            controller: scoreController,
+                            decoration: const InputDecoration(
+                              labelText: 'Calificación Obtenida',
+                              prefixIcon: Icon(Icons.check_box_outlined),
+                              border: InputBorder.none,
                             ),
+                            keyboardType: TextInputType.number,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              if(selectedStudentId != null)
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 15),
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        // 1. Limpia el ID del estudiante seleccionado
+                        setState(() async {
+                          selectedStudentId = null;
+                          studentExams = [];
+                          await _loadGroupExams(); // Limpiamos para mostrar el loading si fuera necesario
+                        });
+                        // NOTA: El DropdownButtonFormField se actualizará
+                        // automáticamente a "Seleccionar Estudiante" (null)
+                        // porque su propiedad `value` maneja el null correctamente.
+                      },
+                      icon: const Icon(Icons.close, color: Colors.white),
+                      label: const Text("Quitar Filtro de Estudiante"),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: appColors[9],
+                        foregroundColor: Colors.white,
+                        padding:
+                        const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 15),
+                    // Guardar evaluaciones
+                    Center(
+                      child: ElevatedButton.icon(
+                        onPressed: _createExam,
+                        icon: const Icon(Icons.save, color: Colors.white),
+                        label: const Text("Guardar Evaluación", style: TextStyle(color: Colors.white, fontSize: 12),),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: appColors[3],
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
                           ),
                         ),
                       ),
-                      const SizedBox(height: 15),
-                      // Ver evaluaciones
-                      const Text(
-                        "Evaluaciones del Estudiante",
-                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+              const SizedBox(height: 15,),
+              if (studentExams.isNotEmpty)
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Ver evaluaciones
+                    CustomTitleWidget(
+                      child: Text(selectedStudentId != null ? "Evaluciones de Estudiante" : "Evaluciones por Grupo",
+                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white,),
                       ),
-                      const SizedBox(height: 15),
-                      if (loadingExams)
-                        const Center(child: CircularProgressIndicator())
-                      else if (studentExams.isEmpty)
-                        const Text("Sin registros de evaluaciones.")
-                      else
-                        SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          child: DataTable(
-                            columns: const [
-                              DataColumn(label: Text("Bloque")),
-                              DataColumn(label: Text("Tipo")),
-                              DataColumn(label: Text("Puntaje")),
-                            ],
-                            rows: studentExams.map<DataRow>((exam) {
-                              final block = exam["teachingblocks"]?["teachingBlock"] ?? "—";
-                              final type = exam["type"] ?? "—";
-                              final score = exam["score"].toString();
-                              final maxScore = exam["maxScore"].toString();
-                              return DataRow(cells: [
-                                DataCell(Text(block)),
-                                DataCell(Text(type)),
-                                DataCell(Text(score)),
-                              ]);
-                            }).toList(),
-                          ),
-                        ),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(height: 15),
+                    StudentExamsTable(studentExams: studentExams)
+                  ],
                 ),
             ],
           ),
@@ -525,4 +561,121 @@ class _ExamsScreenState extends State<ExamsScreen> {
       ),
     );
   }
+}
+
+class StudentExamsTable extends StatelessWidget {
+  final List studentExams;
+
+  const StudentExamsTable({super.key, required this.studentExams});
+
+  @override
+  Widget build(BuildContext context) {
+    final dataSource = _StudentExamsDataSource(studentExams: studentExams);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: double.infinity,
+          child: PaginatedDataTable(
+            columns: const [
+              DataColumn(label: Text("Estudiante", style: TextStyle(fontWeight: FontWeight.bold))),
+              DataColumn(label: Text("Bloque", style: TextStyle(fontWeight: FontWeight.bold))),
+              DataColumn(label: Text("Tipo", style: TextStyle(fontWeight: FontWeight.bold))),
+              DataColumn(label: Text("Puntaje", style: TextStyle(fontWeight: FontWeight.bold))),
+              DataColumn(label: Text("Acción", style: TextStyle(fontWeight: FontWeight.bold))),
+            ],
+            source: dataSource,
+            rowsPerPage: 15,
+            availableRowsPerPage: const [5, 10, 15, 20],
+            showCheckboxColumn: false,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _StudentExamsDataSource extends DataTableSource {
+  final List studentExams;
+
+  _StudentExamsDataSource({required this.studentExams});
+
+  Color _getScoreColor(double? score) {
+    if (score == null) return Colors.black87;
+    return score >= 11 ? Colors.green[700]! : Colors.red[700]!;
+  }
+
+  Color _getScoreBackground(double? score) {
+    if (score == null) return Colors.transparent;
+    return score >= 11
+        ? Colors.green.withOpacity(0.08)
+        : Colors.red.withOpacity(0.08);
+  }
+
+  DataCell _buildScoreCell(double? score) {
+    return DataCell(Container(
+      color: _getScoreBackground(score),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      child: Text(
+        score != null ? score.toStringAsFixed(2) : "—",
+        style: TextStyle(
+          color: _getScoreColor(score),
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    ));
+  }
+
+  @override
+  DataRow? getRow(int index) {
+    if (index >= studentExams.length) return null;
+
+    final exam = studentExams[index];
+    final student = exam['students']?['persons'];
+    final fullNames = student != null
+        ? "${student["names"]} ${student["lastNames"]}"
+        : "Desconocido";
+    final block = exam["teachingblocks"]?["teachingBlock"] ?? "—";
+    final type = exam["type"] ?? "—";
+    final score = double.tryParse(exam["score"]?.toString() ?? "");
+
+    return DataRow(
+      color: index.isEven
+          ? WidgetStateProperty.all(Colors.grey.shade50)
+          : WidgetStateProperty.all(Colors.white),
+      cells: [
+        DataCell(Text(fullNames)),
+        DataCell(Text(block)),
+        DataCell(Text(type)),
+        _buildScoreCell(score),
+        DataCell(
+          Row(
+            mainAxisAlignment: MainAxisAlignment.start,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.edit, color: Colors.teal),
+                tooltip: "Editar Evaluación",
+                onPressed: () {},
+              ),
+              IconButton(
+                icon: const Icon(Icons.delete, color: Colors.redAccent),
+                tooltip: "Eliminar Evaluación",
+                onPressed: () {},
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  @override
+  bool get isRowCountApproximate => false;
+
+  @override
+  int get rowCount => studentExams.length;
+
+  @override
+  int get selectedRowCount => 0;
 }

@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
-import 'package:intl/intl.dart';
 import 'package:schoolnet/screens/adminScreens/yearsScreen.dart';
 import 'package:schoolnet/screens/teacherScreens/assistancesScreen.dart';
 import 'dart:convert';
 import 'package:schoolnet/utils/colors.dart';
 import 'package:schoolnet/utils/customDataSelection.dart';
-import 'package:table_calendar/table_calendar.dart';
+import 'package:schoolnet/utils/customTextFields.dart';
 
 class QualificationsScreen extends StatefulWidget {
   final int teacherId;
@@ -120,12 +119,14 @@ class _QualificationsScreenState extends State<QualificationsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Calificaciones', style: TextStyle(fontSize: 15, color: Colors.white)),
+        title: Text('Calificación Diaria - Docente ${widget.teacherId}', style: const TextStyle(fontSize: 15, color: Colors.white)),
         automaticallyImplyLeading: false,
         backgroundColor: appColors[3],
       ),
-      body: SingleChildScrollView(
-        child: Padding(
+      body: SelectableRegion(
+        focusNode: FocusNode(),
+        selectionControls: materialTextSelectionControls,
+        child: SingleChildScrollView(
           padding: const EdgeInsets.all(15),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -135,7 +136,7 @@ class _QualificationsScreenState extends State<QualificationsScreen> {
                 children: [
                   Expanded(
                     child: SelectionField(
-                      hintText: "Seleccionar Año Escolar",
+                      labelText: "Seleccionar Año Escolar",
                       displayController: yearDisplayController,
                       idController: yearIdController,
                       token: token,
@@ -168,18 +169,14 @@ class _QualificationsScreenState extends State<QualificationsScreen> {
               ),
               const SizedBox(height: 15),
               // Selección de horarios
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 0),
-                child: loadingSchedules
-                    ? const Center(child: CircularProgressIndicator())
-                    : DropdownButtonFormField<String>(
+              CustomInputContainer(
+                child: DropdownButtonFormField<String>(
                   decoration: InputDecoration(
                     labelText: "Horario",
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+                    border: InputBorder.none,
                     filled: true,
                     fillColor: Colors.grey[100],
+                    prefixIcon: const Icon(Icons.schedule),
                   ),
                   value: selectedScheduleId,
                   items: schedules.map<DropdownMenuItem<String>>((item) {

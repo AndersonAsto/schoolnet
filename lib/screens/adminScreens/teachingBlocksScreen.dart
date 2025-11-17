@@ -1,9 +1,11 @@
+import 'dart:convert';
+
+import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:schoolnet/screens/adminScreens/yearsScreen.dart';
 import 'package:schoolnet/services/apiService.dart';
 import 'package:schoolnet/utils/colors.dart';
-import 'package:http/http.dart' as http;
-import 'package:flutter/material.dart';
-import 'dart:convert';
+import 'package:schoolnet/utils/customTextFields.dart';
 
 class TeachingBlocksScreen extends StatefulWidget {
   const TeachingBlocksScreen({super.key});
@@ -21,8 +23,6 @@ class _TeachingBlocksScreenState extends State<TeachingBlocksScreen> {
   List<dynamic> teachingBlocks = [];
   String? token;
   dynamic selectedYears;
-
-  final String apiUrl = 'http://localhost:3000/api';
 
   @override
   void initState() {
@@ -56,10 +56,10 @@ class _TeachingBlocksScreenState extends State<TeachingBlocksScreen> {
     }
   }
 
-
   Future<void> _fetchBloques() async {
     try {
-      final response = await http.get(Uri.parse('$apiUrl/teachingBlocks/list'));
+      final response =
+          await http.get(Uri.parse('${generalUrl}api/teachingBlocks/list'));
       if (response.statusCode == 200) {
         setState(() {
           teachingBlocks = json.decode(response.body);
@@ -75,11 +75,14 @@ class _TeachingBlocksScreenState extends State<TeachingBlocksScreen> {
     final startDay = startDayController.text.trim();
     final endDay = endDayController.text.trim();
 
-    if (selectedYears == null || teachingBlock.isEmpty || startDay.isEmpty || endDay.isEmpty) return;
+    if (selectedYears == null ||
+        teachingBlock.isEmpty ||
+        startDay.isEmpty ||
+        endDay.isEmpty) return;
 
     try {
       final response = await http.post(
-        Uri.parse('$apiUrl/teachingBlocks/create'),
+        Uri.parse('${generalUrl}api/teachingBlocks/create'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
           'yearId': selectedYears['id'],
@@ -121,121 +124,152 @@ class _TeachingBlocksScreenState extends State<TeachingBlocksScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Bloques Lectivos', style: TextStyle(fontSize: 15, color: Colors.white),),
+        title: const Text(
+          'Bloques Lectivos',
+          style: TextStyle(fontSize: 15, color: Colors.white),
+        ),
         automaticallyImplyLeading: false,
         backgroundColor: appColors[3],
       ),
       body: SelectableRegion(
-          focusNode: FocusNode(),
-          selectionControls: materialTextSelectionControls,
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              children: [
-                Card(
-                  margin: const EdgeInsets.only(bottom: 16.0),
-                  child: ExpansionTile(
-                    title: const Text('Registrar Nuevo Bloque Lectivo'),
-                    subtitle: const Text('Toca para expandir el formulario'),
-                    leading: const Icon(Icons.add_box),
-                    childrenPadding: const EdgeInsets.all(16.0),
-                    children: <Widget>[
-                      Row(
-                        children: [
-                          Expanded(child: DropdownButtonFormField<dynamic>(
-                            value: selectedYears,
-                            items: yearsList.map((year) {
-                              return DropdownMenuItem(
-                                value: year,
-                                child: Text(year['year'].toString()),
-                              );
-                            }).toList(),
-                            onChanged: (value) => setState(() => selectedYears = value),
-                            decoration: const InputDecoration(
-                              labelText: 'Seleccionar Año',
-                              border: OutlineInputBorder(),
+        focusNode: FocusNode(),
+        selectionControls: materialTextSelectionControls,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(15),
+          child: Column(
+            children: [
+              Card(
+                child: ExpansionTile(
+                  title: const Text('Registrar/Actualizar Bloque Lectivo'),
+                  subtitle: const Text('Toca para expandir el formulario'),
+                  leading: const Icon(Icons.add_box),
+                  childrenPadding: const EdgeInsets.all(15),
+                  children: <Widget>[
+                    Row(
+                      children: [
+                        Expanded(
+                          child: SizedBox(
+                            height: 36,
+                            child: DropdownButtonFormField<dynamic>(
+                              value: selectedYears,
+                              items: yearsList.map((year) {
+                                return DropdownMenuItem(
+                                  value: year,
+                                  child: Text(year['year'].toString()),
+                                );
+                              }).toList(),
+                              onChanged: (value) =>
+                                  setState(() => selectedYears = value),
+                              decoration: InputDecoration(
+                                labelText: "Seleccionar Año",
+                                filled: true,
+                                fillColor: Colors.grey[100],
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: const BorderSide(width: 1, color: Colors.black,),
+                                ),
+                              ),
                             ),
-                          ),),
-                          const SizedBox(width: 10),
-                          Expanded(child: TextField(
+                          )
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: CustomTextField(
                             controller: blockController,
-                            decoration: const InputDecoration(
-                              labelText: 'Nombre del Bloque Lectivo',
-                              border: OutlineInputBorder(),
-                            ),
-                          ),),
-                        ],
-                      ),
-                      const SizedBox(height: 10),
-                      Row(
-                        children: [
-                          Expanded(child: TextField(
+                            label: 'Bloque Lectivo',
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: CustomTextField(
                             controller: startDayController,
+                            label: 'Fecha de Inicio',
                             readOnly: true,
                             onTap: () => selectDate(startDayController),
-                            decoration: const InputDecoration(
-                              labelText: 'Fecha de Inicio',
-                              border: OutlineInputBorder(),
-                            ),
-                          ),),
-                          const SizedBox(width: 10),
-                          Expanded(child: TextField(
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: CustomTextField(
                             controller: endDayController,
                             readOnly: true,
                             onTap: () => selectDate(endDayController),
-                            decoration: const InputDecoration(
-                              labelText: 'Fecha de Fin',
-                              border: OutlineInputBorder(),
-                            ),
-                          ),),
-                        ],
-                      ),
-                      const SizedBox(height: 10),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          ElevatedButton.icon(
-                            onPressed: createBlocks,
-                            icon: const Icon(Icons.save),
-                            label: const Text("Registrar Bloque Lectivo"),
+                            label: 'Fecha de Fin',
                           ),
-                        ],
-                      )
-                    ],
-                  ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    CustomElevatedButtonIcon(
+                      label: "Registrar Bloque Lectivo",
+                      icon: Icons.save,
+                      onPressed: createBlocks,
+                    ),
+                  ],
                 ),
-                const Divider(height: 20),
-                const Text('Bloques Lectivos Registrados', style: TextStyle(fontWeight: FontWeight.bold)),
-                const Divider(height: 20),
-                const SizedBox(height: 20),
-                ListView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: teachingBlocks.length,
-                  itemBuilder: (context, index) {
-                    final block = teachingBlocks[index];
-                    return Card(
-                      margin: const EdgeInsets.symmetric(vertical: 5),
-                      child: ListTile(
-                        leading: Icon(Icons.calendar_today, color: appColors[3]),
-                        title: Text(block['teachingBlock']),
-                        subtitle: Text(
-                          'Año: ${block['years']['year']}, '
-                              'Inicio: ${block['startDay']}, '
-                              'Fin: ${block['endDay']}',
-                        ),
-                        trailing: Icon(
-                          block['status'] ? Icons.check_circle : Icons.cancel,
-                          color: block['status'] ? Colors.green : Colors.red,
-                        ),
+              ),
+              const SizedBox(height: 15),
+              const CustomTitleWidget(
+                child: Text('Bloques Lectivos Registrados',
+                    style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white)),
+              ),
+              const SizedBox(height: 15),
+              ListView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: teachingBlocks.length,
+                itemBuilder: (context, index) {
+                  final block = teachingBlocks[index];
+                  return Card(
+                    margin: const EdgeInsets.symmetric(vertical: 5),
+                    child: ListTile(
+                      leading: Icon(Icons.calendar_today, color: appColors[3]),
+                      title: Text(block['teachingBlock']),
+                      subtitle: Text(
+                        'Año: ${block['years']['year']}, '
+                        'Inicio: ${block['startDay']}, '
+                        'Fin: ${block['endDay']}',
                       ),
-                    );
-                  },
-                ),
-              ],
-            ),
+                      trailing: SizedBox(
+                        width: 120,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            IconButton(
+                              color: block['status'] ? appColors[3] : Colors.red,
+                              icon: Icon(block['status'] ? Icons.check_circle : Icons.cancel),
+                              onPressed: () {},
+                              tooltip: 'Estado',
+                            ),
+                            IconButton(
+                              icon: Icon(Icons.edit, color: appColors[3]),
+                              onPressed: () {},
+                              tooltip: 'Editar Bloque',
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.delete, color: Colors.red),
+                              onPressed: () {},
+                              tooltip: 'Eliminar Bloque',
+                            ),
+                          ],
+                        ),
+                      )
+                    ),
+                  );
+                },
+              ),
+            ],
           ),
+        ),
       ),
     );
   }

@@ -5,6 +5,8 @@ import 'package:schoolnet/services/apiService.dart';
 import 'package:schoolnet/utils/colors.dart';
 import 'dart:convert';
 
+import 'package:schoolnet/utils/customTextFields.dart';
+
 class HolidaysScreen extends StatefulWidget {
   const HolidaysScreen({super.key});
 
@@ -46,7 +48,7 @@ class _HolidaysScreenState extends State<HolidaysScreen> {
   }
 
   Future<void> fetchHolidays() async {
-    final response = await http.get(Uri.parse('${apiUrl}api/holidays/list'));
+    final response = await http.get(Uri.parse('${generalUrl}api/holidays/list'));
     if (response.statusCode == 200) {
       setState(() {
         holidays = json.decode(response.body);
@@ -58,7 +60,7 @@ class _HolidaysScreenState extends State<HolidaysScreen> {
     if (selectedYearId == null || selectedDate == null) return;
 
     final response = await http.post(
-      Uri.parse('${apiUrl}api/holidays/create'),
+      Uri.parse('${generalUrl}api/holidays/create'),
       headers: {'Content-Type': 'application/json'},
       body: json.encode({
         'yearId': selectedYearId,
@@ -88,108 +90,137 @@ class _HolidaysScreenState extends State<HolidaysScreen> {
         backgroundColor: appColors[3],
       ),
       body: SelectableRegion(
-          focusNode: FocusNode(),
-          selectionControls: materialTextSelectionControls,
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              children: [
-                Card(
-                  margin: const EdgeInsets.only(bottom: 16.0),
-                  child: ExpansionTile(
-                    title: const Text('Registrar Nuevo Día Feriado'),
-                    subtitle: const Text('Toca para expandir el formulario'),
-                    leading: const Icon(Icons.add_box),
-                    childrenPadding: const EdgeInsets.all(16.0),
-                    children: <Widget>[
-                      Row(
-                        children: [
-                          Expanded(child: DropdownButtonFormField<int>(
-                            decoration: const InputDecoration(
-                              labelText: 'Seleccionar Año',
-                              border: OutlineInputBorder(),
-                            ),
-                            value: selectedYearId,
-                            items: years.map<DropdownMenuItem<int>>((year) {
-                              return DropdownMenuItem<int>(
-                                value: year['id'],
-                                child: Text('${year['year']}'),
-                              );
-                            }).toList(),
-                            onChanged: (value) {
-                              setState(() {
-                                selectedYearId = value;
-                              });
-                            },
-                          ),),
-                          const SizedBox(width: 10),
-                          Expanded(child: GestureDetector(
-                            onTap: () async {
-                              DateTime now = DateTime.now();
-                              final picked = await showDatePicker(
-                                context: context,
-                                initialDate: now,
-                                firstDate: DateTime(now.year - 5),
-                                lastDate: DateTime(now.year + 5),
-                              );
-                              if (picked != null) {
-                                setState(() {
-                                  selectedDate = picked;
-                                });
-                              }
-                            },
-                            child: AbsorbPointer(
-                              child: TextFormField(
-                                decoration: const InputDecoration(
-                                  labelText: 'Selecciona la Fecha del Feriado',
-                                  hintText: 'yyyy-mm-dd',
-                                ),
-                                controller: TextEditingController(
-                                  text: selectedDate == null
-                                      ? ''
-                                      : selectedDate!.toIso8601String().split('T')[0],
+        focusNode: FocusNode(),
+        selectionControls: materialTextSelectionControls,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(15),
+          child: Column(
+            children: [
+              Card(
+                child: ExpansionTile(
+                  title: const Text('Registrar/Actualizar Día Feriado'),
+                  subtitle: const Text('Toca para expandir el formulario'),
+                  leading: const Icon(Icons.add_box),
+                  childrenPadding: const EdgeInsets.all(15),
+                  children: <Widget>[
+                    Row(
+                      children: [
+                        Expanded(
+                          child: SizedBox(
+                            height: 36,
+                            child: DropdownButtonFormField<int>(
+                              decoration: InputDecoration(
+                                labelText: "Seleccionar Año",
+                                filled: true,
+                                fillColor: Colors.grey[100],
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: const BorderSide(width: 1, color: Colors.black,),
                                 ),
                               ),
+                              value: selectedYearId,
+                              items: years.map<DropdownMenuItem<int>>((year) {
+                                return DropdownMenuItem<int>(
+                                  value: year['id'],
+                                  child: Text('${year['year']}'),
+                                );
+                              }).toList(),
+                              onChanged: (value) {
+                                setState(() {
+                                  selectedYearId = value;
+                                });
+                              },
                             ),
-                          ),),
-                        ],
-                      ),
-                      const SizedBox(height: 10),
-                      ElevatedButton(
-                        onPressed: saveHoliday,
-                        child: const Text('Guardar Feriado'),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 20),
-                const Divider(height: 20),
-                const Text('Días Feriados Registrados', style: TextStyle(fontWeight: FontWeight.bold)),
-                const Divider(height: 20),
-                const SizedBox(height: 20),
-                ListView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: holidays.length,
-                  itemBuilder: (context, index) {
-                    final h = holidays[index];
-                    return Card(
-                      margin: const EdgeInsets.symmetric(vertical: 4.0),
-                      child: ListTile(
-                        leading: Icon(Icons.calendar_today, color: appColors[3]),
-                        title: Text('Feriado: ${h['holiday']}'),
-                        subtitle: Text('Año: ${h['years']['year']}'),
-                        trailing: Icon(
-                          h['status'] ? Icons.check_circle : Icons.cancel,
-                          color: h['status'] ? Colors.green : Colors.red,
+                          )
                         ),
-                      ),
-                    );
-                  },
+                        const SizedBox(width: 10),
+                        Expanded(child: GestureDetector(
+                          onTap: () async {
+                            DateTime now = DateTime.now();
+                            final picked = await showDatePicker(
+                              context: context,
+                              initialDate: now,
+                              firstDate: DateTime(now.year - 5),
+                              lastDate: DateTime(now.year + 5),
+                            );
+                            if (picked != null) {
+                              setState(() {
+                                selectedDate = picked;
+                              });
+                            }
+                          },
+                          child: AbsorbPointer(
+                            child: CustomTextField(
+                              label: 'Fecha de Día Feriado',
+                              controller: TextEditingController(
+                                text: selectedDate == null
+                                    ? ''
+                                    : selectedDate!.toIso8601String().split('T')[0],
+                              ),
+                            ),
+                          ),
+                        ),),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    CustomElevatedButtonIcon(
+                      label: "Guardar Día Feriado",
+                      icon: Icons.save,
+                      onPressed: saveHoliday,
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+              const SizedBox(height: 15),
+              const CustomTitleWidget(
+                child: Text('Días Feriados Registrados', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white)),
+              ),
+              const SizedBox(height: 15),
+              ListView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: holidays.length,
+                itemBuilder: (context, index) {
+                  final h = holidays[index];
+                  return Card(
+                    margin: const EdgeInsets.symmetric(vertical: 4.0),
+                    child: ListTile(
+                      leading: Icon(Icons.calendar_today, color: appColors[3]),
+                      title: Text('Feriado: ${h['holiday']}'),
+                      subtitle: Text('Año: ${h['years']['year']}'),
+                      trailing: SizedBox(
+                        width: 120,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            IconButton(
+                              color: h['status'] ? appColors[3] : Colors.red,
+                              icon: Icon(h['status'] ? Icons.check_circle : Icons.cancel),
+                              onPressed: () {},
+                              tooltip: 'Estado',
+                            ),
+                            IconButton(
+                              icon: Icon(Icons.edit, color: appColors[3]),
+                              onPressed: () {},
+                              tooltip: 'Editar Año',
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.delete, color: Colors.red),
+                              onPressed: () {},
+                              tooltip: 'Eliminar Año',
+                            ),
+                          ],
+                        ),
+                      )
+                    ),
+                  );
+                },
+              ),
+            ],
           ),
+        ),
       ),
     );
   }

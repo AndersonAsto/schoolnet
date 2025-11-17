@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:schoolnet/services/apiService.dart';
 import 'package:schoolnet/utils/colors.dart';
-import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:schoolnet/utils/customTextFields.dart';
 
 final storage = FlutterSecureStorage();
-const apiUrl = "http://localhost:3000/";
 
 class YearsScreen extends StatefulWidget {
   const YearsScreen({super.key});
@@ -84,62 +83,95 @@ class _YearsScreenState extends State<YearsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Años",
-            style: TextStyle(fontSize: 15, color: Colors.white)),
+        title: const Text("Años", style: TextStyle(fontSize: 15, color: Colors.white)),
         automaticallyImplyLeading: false,
         backgroundColor: appColors[3],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: yearController,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      labelText: "Ingresar Año",
-                      border: OutlineInputBorder(),
+      body: SelectableRegion(
+        focusNode: FocusNode(),
+        selectionControls: materialTextSelectionControls,
+        child: Padding(
+          padding: const EdgeInsets.all(15),
+          child: Column(
+            children: [
+              Card(
+                child: ExpansionTile(
+                  title: const Text('Registrar/Actualizar Año'),
+                  subtitle: const Text('Toca para expandir el formulario'),
+                  leading: const Icon(Icons.add_box),
+                  childrenPadding: const EdgeInsets.all(15),
+                  children: <Widget>[
+                    Row(
+                      children: [
+                        Expanded(
+                          child: CustomTextField(
+                            controller: yearController,
+                            keyboardType: TextInputType.number,
+                            label: 'Año',
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                ElevatedButton(
-                  onPressed: createYear,
-                  child: const Text("Guardar"),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-            const Divider(),
-            const Text("Años Registrados",
-                style: TextStyle(fontWeight: FontWeight.bold)),
-            const Divider(),
-            const SizedBox(height: 20),
-            Expanded(
-              child: ListView.builder(
-                itemCount: years.length,
-                itemBuilder: (context, index) {
-                  final item = years[index];
-                  return Card(
-                    margin: const EdgeInsets.symmetric(vertical: 4.0),
-                    child: ListTile(
-                      leading: Icon(Icons.calendar_today, color: appColors[3]),
-                      title: Text("${item['year']}"),
-                      subtitle: Text(
-                          "ID: ${item['id']} - Estado: ${item['status'] ? "Activo" : "Inactivo"}"),
-                      trailing: Icon(
-                        item['status'] ? Icons.check_circle : Icons.cancel,
-                        color: item['status'] ? Colors.green : Colors.red,
-                      ),
+                    const SizedBox(height: 10),
+                    CustomElevatedButtonIcon(
+                      label: "Guardar",
+                      icon: Icons.save,
+                      onPressed: createYear,
                     ),
-                  );
-                },
+                  ],
+                ),
               ),
-            ),
-          ],
+              const SizedBox(height: 15),
+              const CustomTitleWidget(
+                child: Text("Años Registrados",
+                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white,),
+                ),
+              ),
+              const SizedBox(height: 15),
+              Expanded(
+                child: ListView.builder(
+                  itemCount: years.length,
+                  itemBuilder: (context, index) {
+                    final item = years[index];
+                    return Card(
+                      margin: const EdgeInsets.symmetric(vertical: 4.0),
+                      child: ListTile(
+                        leading: Icon(Icons.calendar_today, color: appColors[3]),
+                        title: Text("${item['year']}"),
+                        subtitle: Text(
+                            "ID: ${item['id']} - Estado: ${item['status'] ? "Activo" : "Inactivo"}"),
+                        trailing: SizedBox(
+                          width: 120,
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              IconButton(
+                                color: item['status'] ? appColors[3] : Colors.red,
+                                icon: Icon(item['status'] ? Icons.check_circle : Icons.cancel),
+                                onPressed: () {},
+                                tooltip: 'Estado',
+                              ),
+                              IconButton(
+                                icon: Icon(Icons.edit, color: appColors[3]),
+                                onPressed: () {},
+                                tooltip: 'Editar Año',
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.delete, color: Colors.red),
+                                onPressed: () {},
+                                tooltip: 'Eliminar Año',
+                              ),
+                            ],
+                          ),
+                        )
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

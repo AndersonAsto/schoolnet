@@ -222,7 +222,7 @@ class _TeachersAssignmentsScreenState extends State<TeachersAssignmentsScreen> {
       final courseData = user['courses'];
       if (courseData != null) {
         courseIdController.text = courseData['id'].toString(); // Asignar el ID
-        courseDisplayController.text = '${courseData['id']} - ${courseData['name']}'; // Asignar el nombre
+        courseDisplayController.text = '${courseData['id']} - ${courseData['course']}'; // Asignar el nombre
       } else {
         courseIdController.clear();
         courseDisplayController.clear();
@@ -239,7 +239,7 @@ class _TeachersAssignmentsScreenState extends State<TeachersAssignmentsScreen> {
     final lowerQuery = query.toLowerCase();
     setState(() {
       filteredTeachersAssignmentsList = teachersAssignmentsList.where((user) {
-        final nombre = '${user['persons']['names']} ${user['persons']['lastNames']} ${user['role']} ${user['userName']}'.toLowerCase();
+        final nombre = '${user['persons']['names']} ${user['persons']['lastNames']} ${user['courses']['course']} ${user['years']['year'].toString()}'.toLowerCase();
         return nombre.contains(lowerQuery);
       }).toList();
 
@@ -275,7 +275,7 @@ class _TeachersAssignmentsScreenState extends State<TeachersAssignmentsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Docentes+', style: TextStyle(fontSize: 15, color: Colors.white),),
+        title: const Text('Docentes', style: TextStyle(fontSize: 15, color: Colors.white),),
         automaticallyImplyLeading: false,
         backgroundColor: appColors[3],
       ),
@@ -283,16 +283,15 @@ class _TeachersAssignmentsScreenState extends State<TeachersAssignmentsScreen> {
         focusNode: FocusNode(),
         selectionControls: materialTextSelectionControls,
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(10),
+          padding: const EdgeInsets.all(15),
           child: Column(
             children: [
               Card(
-                margin: const EdgeInsets.only(bottom: 20),
                 child: ExpansionTile(
                   title: const Text('Registrar/Actualizar Docente'),
                   subtitle: const Text('Toca para abrir el formulario'),
                   leading: const Icon(Icons.add_box),
-                  childrenPadding: const EdgeInsets.all(16.0),
+                  childrenPadding: const EdgeInsets.all(15),
                   children: [
                     CommonInfoFields(idController: idController, statusController: statusController),
                     const SizedBox(height: 10),
@@ -300,7 +299,7 @@ class _TeachersAssignmentsScreenState extends State<TeachersAssignmentsScreen> {
                       children: [
                         Expanded(
                           child: SelectionField(
-                            hintText: "Seleccionar Docente",
+                            labelText: "Seleccionar Docente",
                             displayController: personDisplayController,
                             idController: personIdController,
                             onTap: () async => await showPersonsByRole(context, personIdController, personDisplayController, 'Docente'),
@@ -309,7 +308,7 @@ class _TeachersAssignmentsScreenState extends State<TeachersAssignmentsScreen> {
                         const SizedBox(width: 10),
                         Expanded(
                           child: SelectionField(
-                            hintText: "Seleccionar Año",
+                            labelText: "Seleccionar Año",
                             token: token,
                             displayController: yearDisplayController,
                             idController: yearIdController,
@@ -319,16 +318,14 @@ class _TeachersAssignmentsScreenState extends State<TeachersAssignmentsScreen> {
                       ],
                     ),
                     const SizedBox(height: 10),
-                    const SizedBox(height: 10),
                     Row(
                       children: [
                         Expanded(
-                          child: SelectionField( // Asegúrate de que este widget maneje la selección y el endpoint
-                            hintText: "Seleccionar Curso (Opcional)",
+                          child: SelectionField(
+                            labelText: "Seleccionar Curso",
                             token: token,
                             displayController: courseDisplayController,
                             idController: courseIdController,
-                            // Usar el nuevo endpoint y una nueva función de selección
                             onTap: () async => await showCourseSelection(context, courseIdController, courseDisplayController),
                           ),
                         ),
@@ -337,35 +334,38 @@ class _TeachersAssignmentsScreenState extends State<TeachersAssignmentsScreen> {
                     ),
                     const SizedBox(height: 10),
                     CommonTimestampsFields(createdAtController: createdAtController, updatedAtController: updatedAtController),
-
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 10),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
-                        IconButton(onPressed: saveTeacherAssignments, icon: Icon(Icons.save, color: appColors[3]),),
-                        IconButton(onPressed: cancelUpdate, icon: const Icon(Icons.clear_all, color: Colors.deepOrange)),
-                        IconButton(onPressed: updateTeachersAssignments, icon: Icon(Icons.update, color: appColors[8])),
+                        IconButton(onPressed: saveTeacherAssignments, icon: Icon(Icons.save, color: appColors[3]), tooltip: 'Guardar',),
+                        IconButton(onPressed: cancelUpdate, icon: const Icon(Icons.clear_all, color: Colors.deepOrange), tooltip: 'Cancelar Actualización'),
+                        IconButton(onPressed: updateTeachersAssignments, icon: Icon(Icons.update, color: appColors[8]), tooltip: 'Actualizar'),
                       ],
                     ),
                   ],
                 ),
               ),
               // Sección de la tabla de datos
-              const Divider(height: 20),
-              const Text("Asignaciones de Docentes", style: TextStyle(fontWeight: FontWeight.bold)),
-              const SizedBox(height: 20),
-              TextField(
-                controller: searchController,
-                decoration: const InputDecoration(
-                  labelText: 'Buscar por nombres o apellidos',
-                  prefixIcon: Icon(Icons.search),
-                  border: OutlineInputBorder(),
-                ),
-                onChanged: (value) {
-                  filterUsers(value);
-                },
+              const SizedBox(height: 15),
+              const CustomTitleWidget(
+                child: Text('Asignaciones de Docentes', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white)),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 15),
+              CustomInputContainer(
+                child: TextField(
+                  controller: searchController,
+                  decoration: const InputDecoration(
+                    labelText: 'Buscar',
+                    prefixIcon: Icon(Icons.search, color: Colors.teal),
+                    border: InputBorder.none,
+                  ),
+                  onChanged: (value) {
+                    filterUsers(value);
+                  },
+                ),
+              ),
+              const SizedBox(height: 15),
               SingleChildScrollView(
                 child: ConstrainedBox(
                   constraints: BoxConstraints(minWidth: MediaQuery.of(context).size.width),
@@ -374,8 +374,9 @@ class _TeachersAssignmentsScreenState extends State<TeachersAssignmentsScreen> {
                       DataColumn(label: Text('ID')),
                       DataColumn(label: Text('(ID) Nombres y Apellidos')),
                       DataColumn(label: Text('(ID) Año')),
-                      DataColumn(label: Text('Estado')),
-                      DataColumn(label: Text('Creado')),
+                      DataColumn(label: Text('(ID) Curso')),
+                      //DataColumn(label: Text('Estado')),
+                      //DataColumn(label: Text('Creado')),
                       DataColumn(label: Text('Acciones')),
                     ],
                     source: _teachersAssignmentsDataSource,
@@ -418,17 +419,25 @@ class _UsersDataSource extends DataTableSource {
         DataCell(Text(user['id'].toString())),
         DataCell(Text('(${user['persons']['id']}) ${user['persons']['names']} ${user['persons']['lastNames']}')),
         DataCell(Text('(${user['years']['id']}) ${user['years']['year']}')),
-        DataCell(Text(user['status'] == true ? 'Activo' : 'Inactivo')),
-        DataCell(Text(user['createdAt'].toString())),
+        DataCell(Text('(${user['courses']['id']}) ${user['courses']['course']}')),
+        //DataCell(Text(user['status'] == true ? 'Activo' : 'Inactivo')),
+        //DataCell(Text(user['createdAt'].toString())),
         DataCell(Row(
           children: [
             IconButton(
-              icon: const Icon(Icons.edit, color: Colors.blue),
+              icon: Icon(Icons.info_outline, color: appColors[9]),
+              onPressed: () {},
+              tooltip: 'Más Información',
+            ),
+            IconButton(
+              icon: Icon(Icons.edit, color: appColors[3]),
               onPressed: () => onEdit(user),
+              tooltip: 'Editar Asignación de Docente',
             ),
             IconButton(
               icon: const Icon(Icons.delete, color: Colors.red),
               onPressed: () => onDelete(user['id']),
+              tooltip: 'Eliminar Asignación de Docente',
             ),
           ],
         )),

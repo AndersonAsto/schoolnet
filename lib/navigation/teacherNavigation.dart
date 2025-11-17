@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:schoolnet/screens/teacherScreens/annualAverageScreen.dart';
 import 'package:schoolnet/screens/teacherScreens/assistancesScreen.dart';
-import 'package:schoolnet/screens/teacherScreens/examsScreen.dart';
+import 'package:schoolnet/screens/teacherScreens/evaluationsScreen.dart';
 import 'package:schoolnet/screens/teacherScreens/overallCourseAverageScreen.dart';
 import 'package:schoolnet/screens/teacherScreens/incidentsScreen.dart';
 import 'package:schoolnet/screens/teacherScreens/qualificationsScreen.dart';

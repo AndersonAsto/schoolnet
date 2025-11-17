@@ -7,9 +7,11 @@ import 'package:schoolnet/screens/adminScreens/personsScreen.dart';
 import 'package:schoolnet/screens/adminScreens/schedulesScreen.dart';
 import 'package:schoolnet/screens/adminScreens/studentEnrollmentsScreen.dart';
 import 'package:schoolnet/screens/adminScreens/teacherAssignmentsScreen.dart';
-import 'package:schoolnet/screens/adminScreens/teachingDaysScreen.dart';
+import 'package:schoolnet/screens/adminScreens/teacherGroupsScreen.dart';
+import 'package:schoolnet/screens/adminScreens/schoolDaysScreen.dart';
 import 'package:schoolnet/screens/adminScreens/sectionsScreen.dart';
 import 'package:schoolnet/screens/adminScreens/teachingBlocksScreen.dart';
+import 'package:schoolnet/screens/adminScreens/tutorsScreen.dart';
 import 'package:schoolnet/screens/adminScreens/usersScreen.dart';
 import 'package:schoolnet/screens/adminScreens/yearsScreen.dart';
 import 'package:sidebarx/sidebarx.dart';
@@ -40,9 +42,11 @@ class _AdminNavigationRailState extends State<AdminNavigationRail> {
     PersonsScreen(),
     UsersScreen(),
     TeachersAssignmentsScreen(),
+    TeacherGroupsScreen(),
     StudentEnrollmentsScreen(),
     ParentAssignmentsScreen(),
-    SchedulesScreen()
+    SchedulesScreen(),
+    TutorsScreen(),
   ];
 
   @override
@@ -139,9 +143,11 @@ class _AdminNavigationRailState extends State<AdminNavigationRail> {
               SidebarXItem(icon: Icons.group, label: 'Personas'),
               SidebarXItem(icon: Icons.person_pin, label: 'Usuarios'),
               SidebarXItem(icon: Icons.work, label: 'Docentes+'),
+              SidebarXItem(icon: Icons.groups, label: 'Grupos'),
               SidebarXItem(icon: Icons.border_color_outlined, label: 'Estudiantes+'),
               SidebarXItem(icon: Icons.family_restroom, label: 'Apoderados+'),
-              SidebarXItem(icon: Icons.schedule, label: 'Horarios')
+              SidebarXItem(icon: Icons.schedule, label: 'Horarios'),
+              SidebarXItem(icon: Icons.personal_injury_rounded, label: 'Tutores')
             ],
           ),
           Expanded(

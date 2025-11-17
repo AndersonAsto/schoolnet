@@ -1,8 +1,9 @@
-import 'package:flutter/material.dart';
 import 'package:schoolnet/screens/adminScreens/yearsScreen.dart';
+import 'package:schoolnet/utils/customTextFields.dart';
 import 'package:schoolnet/services/apiService.dart';
 import 'package:schoolnet/utils/colors.dart';
 import 'package:http/http.dart' as http;
+import 'package:flutter/material.dart';
 import 'dart:convert';
 
 class TeachingDaysScreen extends StatefulWidget {
@@ -48,7 +49,7 @@ class _TeachingDaysScreenState extends State<TeachingDaysScreen> {
   }
 
   Future<void> fetchSchoolDaysByYear(int yearId) async {
-    final response = await http.get(Uri.parse('http://localhost:3000/api/schoolDays/byYear/$yearId'));
+    final response = await http.get(Uri.parse('${generalUrl}api/schoolDays/byYear/$yearId'));
     if (response.statusCode == 200) {
       final dias = jsonDecode(response.body);
       setState(() {
@@ -60,8 +61,8 @@ class _TeachingDaysScreenState extends State<TeachingDaysScreen> {
   Future<void> generateSchoolDays() async {
     if (selectedYearId == null) return;
 
-    final bloquesRes = await http.get(Uri.parse('http://localhost:3000/api/teachingBlocks/byYear/$selectedYearId'));
-    final feriadosRes = await http.get(Uri.parse('http://localhost:3000/api/holidays/byYear/$selectedYearId'));
+    final bloquesRes = await http.get(Uri.parse('${generalUrl}api/teachingBlocks/byYear/$selectedYearId'));
+    final feriadosRes = await http.get(Uri.parse('${generalUrl}api/holidays/byYear/$selectedYearId'));
 
     if (bloquesRes.statusCode == 200 && feriadosRes.statusCode == 200) {
       final bloques = jsonDecode(bloquesRes.body);
@@ -84,7 +85,7 @@ class _TeachingDaysScreenState extends State<TeachingDaysScreen> {
       }
 
       final response = await http.post(
-        Uri.parse('http://localhost:3000/api/schoolDays/bulkCreate'),
+        Uri.parse('${generalUrl}api/schoolDays/bulkCreate'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'yearId': selectedYearId,
@@ -122,37 +123,47 @@ class _TeachingDaysScreenState extends State<TeachingDaysScreen> {
           focusNode: FocusNode(),
           selectionControls: materialTextSelectionControls,
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(16.0),
+            padding: const EdgeInsets.all(15),
             child: Column(
               children: <Widget>[
                 Card(
-                  margin: const EdgeInsets.only(bottom: 16.0),
                   child: ExpansionTile(
-                    title: const Text('Registrar Nuevos Días Lectivos'),
+                    title: const Text('Registrar/Eliminar Días Lectivos'),
                     subtitle: const Text('Toca para expandir el formulario'),
                     leading: const Icon(Icons.add_box),
-                    childrenPadding: const EdgeInsets.all(16.0),
+                    childrenPadding: const EdgeInsets.all(15),
                     children: [
                       Row(
                         children: [
-                          Expanded(child: DropdownButtonFormField<int>(
-                            decoration: const InputDecoration(
-                              labelText: 'Seleccionar Año',
-                              border: OutlineInputBorder(),
-                            ),
-                            value: selectedYearId,
-                            items: years.map((year) {
-                              return DropdownMenuItem<int>(
-                                value: year['id'],
-                                child: Text(year['year'].toString()),
-                              );
-                            }).toList(),
-                            onChanged: (value) {
-                              setState(() {
-                                selectedYearId = value;
-                              });
-                            },
-                          ),),
+                          Expanded(
+                            child: SizedBox(
+                              height: 36,
+                              child: DropdownButtonFormField<int>(
+                                decoration: InputDecoration(
+                                  labelText: "Seleccionar Año",
+                                  filled: true,
+                                  fillColor: Colors.grey[100],
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: const BorderSide(width: 1, color: Colors.black,),
+                                  ),
+                                ),
+                                value: selectedYearId,
+                                items: years.map((year) {
+                                  return DropdownMenuItem<int>(
+                                    value: year['id'],
+                                    child: Text(year['year'].toString()),
+                                  );
+                                }).toList(),
+                                onChanged: (value) {
+                                  setState(() {
+                                    selectedYearId = value;
+                                  });
+                                },
+                              ),
+                            )
+                          ),
                         ],
                       ),
                       const SizedBox(height: 10),
@@ -160,23 +171,26 @@ class _TeachingDaysScreenState extends State<TeachingDaysScreen> {
                         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
-                          ElevatedButton(
+                          CustomElevatedButtonIcon(
+                            label: "Generar Días Lectivos",
+                            icon: Icons.save,
                             onPressed: generateSchoolDays,
-                            child: const Text("Generar Días Lectivos"),
                           ),
-                          ElevatedButton(
+                          CustomElevatedButtonIcon(
+                            label: "Eliminar Días Lectivos",
+                            icon: Icons.delete_outline_outlined,
                             onPressed: (){},
-                            child: const Text("Eliminar Días Lectivos"),
                           ),
                         ],
                       ),
                     ],
                   ),
                 ),
-                const Divider(height: 20),
-                const Text('Días Lectivos Registrados', style: TextStyle(fontWeight: FontWeight.bold)),
-                const Divider(height: 20),
-                const SizedBox(height: 20),
+                const SizedBox(height: 15),
+                const CustomTitleWidget(
+                  child: Text('Días Lectivos Registrados', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white)),
+                ),
+                const SizedBox(height: 15),
                 ListView.builder(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),

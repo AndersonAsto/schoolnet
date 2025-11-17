@@ -4,6 +4,7 @@ import 'package:schoolnet/screens/adminScreens/yearsScreen.dart';
 import 'package:schoolnet/utils/colors.dart';
 import 'package:http/http.dart' as http;
 import 'package:schoolnet/utils/customDataSelection.dart';
+import 'package:schoolnet/utils/customTextFields.dart';
 
 class GeneralAverageScreen extends StatefulWidget {
   final int teacherId;
@@ -232,6 +233,33 @@ class _GeneralAverageScreenState extends State<GeneralAverageScreen> {
     }
   }
 
+  Future<void> _calculateAnnualAverage() async {
+    final url = Uri.parse("http://localhost:3000/api/generalAvarage/calculate");
+    final res = await http.post(
+      url,
+      headers: {
+        "Authorization": "Bearer ${token ?? widget.token}",
+        "Content-Type": "application/json",
+      },
+      body: json.encode({
+        "studentId": selectedStudentId,
+        "assignmentId": selectedScheduleId,
+        "yearId": yearIdController.text
+      }),
+    );
+
+    if (res.statusCode == 200) {
+      final result = json.decode(res.body);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(result["message"] ?? "Promedio general calculado.")),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error al calcular: ${res.body}")),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -243,300 +271,487 @@ class _GeneralAverageScreenState extends State<GeneralAverageScreen> {
         automaticallyImplyLeading: false,
         backgroundColor: appColors[3],
       ),
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: SelectionField(
-                hintText: "Seleccionar Año Escolar",
-                displayController: yearDisplayController,
-                idController: yearIdController,
-                token: token,
-                onTap: () async {
-                  await showYearsSelection(
-                    context,
-                    yearIdController,
-                    yearDisplayController,
-                    token: token,
-                  );
-                },
-              ),
-            ),
-            const SizedBox(height: 10),
-            ElevatedButton.icon(
-              onPressed: _loadYearData,
-              icon: const Icon(Icons.refresh),
-              label: const Text("Cargar Horarios"),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: appColors[3],
-                foregroundColor: Colors.white,
-              ),
-            ),
-            const SizedBox(height: 10),
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: loadingSchedules
-                  ? const CircularProgressIndicator()
-                  : DropdownButtonFormField<String>(
-                decoration: const InputDecoration(labelText: "Grupo Docente"),
-                value: selectedScheduleId,
-                items: schedules.map<DropdownMenuItem<String>>((item) {
-                  final course = item["courses"]?["course"] ?? "Sin curso";
-                  final grade = item["grades"]?["grade"] ?? "—";
-                  final section = item["sections"]?["seccion"] ?? "—";
-                  return DropdownMenuItem<String>(
-                    value: item["id"].toString(),
-                    child: Text("$course - $grade $section"),
-                  );
-                }).toList(),
-                onChanged: (val) async {
-                  setState(() {
-                    selectedScheduleId = val;
-                    selectedStudentId = null;
-                    students = [];
-                    generalAverages = [];
-                    loadingStudents = true;
-                  });
-
-                  if (val != null) {
-                    await _loadStudentsBySchedule();
-
-                    // 🔹 Si hay año seleccionado, mostrar el promedio general del grupo
-                    if (yearIdController.text.isNotEmpty) {
-                      await _fetchGeneralAverages();
-                    }
-                  }
-                },
-              ),
-            ),
-            const SizedBox(height: 10,),
-            if (students.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Divider(),
-                    DropdownButtonFormField<String>(
-                      decoration: const InputDecoration(
-                        labelText: "Seleccionar Estudiante",
-                        border: OutlineInputBorder(),
+      body: SelectableRegion(
+        focusNode: FocusNode(),
+        selectionControls: materialTextSelectionControls,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(15),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: SelectionField(
+                      labelText: "Seleccionar Año Escolar",
+                      displayController: yearDisplayController,
+                      idController: yearIdController,
+                      token: token,
+                      onTap: () async {
+                        await showYearsSelection(
+                          context,
+                          yearIdController,
+                          yearDisplayController,
+                          token: token,
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 15),
+                  ElevatedButton.icon(
+                    onPressed: _loadYearData,
+                    icon: const Icon(Icons.refresh, color: Colors.white,),
+                    label: const Text("Cargar Grupos"),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: appColors[3],
+                      foregroundColor: Colors.white,
+                      padding:
+                      const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
                       ),
-                      // 🔹 Si el estudiante seleccionado ya no está en la lista, mostrar null
-                      value: students.any((s) => s["id"].toString() == selectedStudentId)
-                          ? selectedStudentId
-                          : null,
-
-                      // 🔹 Lista desplegable de estudiantes
-                      items: students.map<DropdownMenuItem<String>>((student) {
-                        final person = student["persons"];
-                        final studentName = "${person["names"]} ${person["lastNames"]}";
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 15),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 0),
+                child: loadingSchedules
+                    ? const CircularProgressIndicator()
+                    : CustomInputContainer(
+                    child: DropdownButtonFormField<String>(
+                      decoration: InputDecoration(
+                        labelText: "Grupo Docente",
+                        border: InputBorder.none,
+                        filled: true,
+                        fillColor: Colors.grey[100],
+                        prefixIcon: const Icon(Icons.groups),
+                      ),
+                      value: selectedScheduleId,
+                      items: schedules.map<DropdownMenuItem<String>>((item) {
+                        final course = item["courses"]?["course"] ?? "Sin curso";
+                        final grade = item["grades"]?["grade"] ?? "—";
+                        final section = item["sections"]?["seccion"] ?? "—";
                         return DropdownMenuItem<String>(
-                          value: student["id"].toString(),
-                          child: Text(studentName),
+                          value: item["id"].toString(),
+                          child: Text("$course - $grade $section"),
                         );
                       }).toList(),
-
-                      // 🔹 Cuando seleccionas un estudiante específico
                       onChanged: (val) async {
                         setState(() {
-                          selectedStudentId = val;
+                          selectedScheduleId = val;
+                          selectedStudentId = null;
+                          students = [];
                           generalAverages = [];
+                          loadingStudents = true;
                         });
-
                         if (val != null) {
-                          // Si hay estudiante seleccionado → buscar por SYA
-                          await _fetchGeneralAverages();
-                        } else {
-                          // Si quitas la selección → buscar por grupo
-                          if (selectedScheduleId != null && yearIdController.text.isNotEmpty) {
+                          await _loadStudentsBySchedule();
+                          // Mostrar promedio general de grupo si se selecciona un año
+                          if (yearIdController.text.isNotEmpty) {
                             await _fetchGeneralAverages();
                           }
                         }
                       },
                     ),
-                  ],
-                ),
+                )
               ),
-            const SizedBox(height: 10,),
-            if (loadingGeneralAverages)
-              const Center(child: CircularProgressIndicator())
-            else if (generalAverages.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.all(12.0),
-                child: Column(
+              const SizedBox(height: 15),
+              CustomInputContainer(
+                  child: DropdownButtonFormField<String>(
+                    decoration: InputDecoration(
+                      labelText: "Seleccionar Estudiante",
+                      border: InputBorder.none,
+                      filled: true,
+                      fillColor: Colors.grey[100],
+                      prefixIcon: const Icon(Icons.person_search_outlined),
+                    ),
+                    // 🔹 Si el estudiante seleccionado ya no está en la lista, mostrar null
+                    value: students.any((s) => s["id"].toString() == selectedStudentId)
+                        ? selectedStudentId
+                        : null,
+                    // 🔹 Lista desplegable de estudiantes
+                    items: students.map<DropdownMenuItem<String>>((student) {
+                      final person = student["persons"];
+                      final studentName = "${person["names"]} ${person["lastNames"]}";
+                      return DropdownMenuItem<String>(
+                        value: student["id"].toString(),
+                        child: Text(studentName),
+                      );
+                    }).toList(),
+                    // 🔹 Cuando seleccionas un estudiante específico
+                    onChanged: (val) async {
+                      setState(() {
+                        selectedStudentId = val;
+                        generalAverages = [];
+                      });
+
+                      if (val != null) {
+                        // Si hay estudiante seleccionado → buscar por SYA
+                        await _fetchGeneralAverages();
+                      } else {
+                        // Si quitas la selección → buscar por grupo
+                        if (selectedScheduleId != null && yearIdController.text.isNotEmpty) {
+                          await _fetchGeneralAverages();
+                        }
+                      }
+                    },
+                  ),
+              ),
+              if (selectedStudentId != null)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 15),
+                      ElevatedButton.icon(
+                        onPressed: () async {
+                          if (selectedStudentId == null || selectedScheduleId == null || yearIdController.text.isEmpty) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text("Debe seleccionar año, horario y estudiante.")),
+                            );
+                            return;
+                          }
+
+                          final url = Uri.parse(
+                              "http://localhost:3000/api/teachingblockaverage/byStudent/$selectedStudentId/year/${yearIdController.text}/assignment/$selectedScheduleId"
+                          );
+                          final res = await http.get(url, headers: {
+                            "Authorization": "Bearer ${token ?? widget.token}",
+                            "Content-Type": "application/json",
+                          });
+
+                          if (res.statusCode == 200) {
+                            final data = json.decode(res.body);
+                            showDialog(
+                              context: context,
+                              builder: (_) => StudentBlockAveragesDialog(
+                                blockAverages: List<Map<String, dynamic>>.from(data),
+                              ),
+                            );
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text("Error al obtener promedios: ${res.body}")),
+                            );
+                          }
+                        },
+                        icon: const Icon(Icons.bar_chart, color: Colors.white,),
+                        label: const Text("Ver Promedios por Bloques Lectivos del Curso"),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: appColors[9],
+                          foregroundColor: Colors.white,
+                          padding:
+                          const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 15),
+                      ElevatedButton.icon(
+                        onPressed: () {
+                          // 1. Limpia el ID del estudiante seleccionado
+                          setState(() {
+                            selectedStudentId = null;
+                            generalAverages = []; // Limpiamos para mostrar el loading si fuera necesario
+                          });
+                          // 2. Recarga los promedios de TODO el grupo
+                          _fetchGeneralAverages();
+                          // NOTA: El DropdownButtonFormField se actualizará
+                          // automáticamente a "Seleccionar Estudiante" (null)
+                          // porque su propiedad `value` maneja el null correctamente.
+                        },
+                        icon: const Icon(Icons.close, color: Colors.white),
+                        label: const Text("Quitar Filtro de Estudiante"),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: appColors[9],
+                          foregroundColor: Colors.white,
+                          padding:
+                          const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 15),
+                      Center(
+                        child: ElevatedButton.icon(
+                          onPressed: _calculateAnnualAverage,
+                          icon: const Icon(Icons.summarize, color: Colors.white),
+                          label: const Text(
+                            "Calcular Promedio Anual",
+                            style: TextStyle(color: Colors.white, fontSize: 12),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: appColors[3],
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              const SizedBox(height: 15),
+              if (generalAverages.isNotEmpty)
+                Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Divider(),
-                    const Text(
-                      "📊 Promedios Generales por Curso",
-                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                    CustomTitleWidget(
+                      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                      child: Text(selectedStudentId == null? "Promedios Generales por Grupo" : "Promedio General de Estudiante",
+                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white,),),
                     ),
-                    const SizedBox(height: 10),
-                    SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: DataTable(
-                        headingRowColor: WidgetStateProperty.all(Colors.blueGrey.shade50),
-                        dataRowColor: WidgetStateProperty.resolveWith<Color?>(
-                              (Set<WidgetState> states) {
-                            if (states.contains(WidgetState.selected)) {
-                              return Theme.of(context).colorScheme.primary.withOpacity(0.08);
-                            }
-                            return null; // default
-                          },
-                        ),
-                        columnSpacing: 20,
-                        columns: const [
-                          DataColumn(label: Text("Año", style: TextStyle(fontWeight: FontWeight.bold))),
-                          DataColumn(label: Text("Curso", style: TextStyle(fontWeight: FontWeight.bold))),
-                          DataColumn(label: Text("Estudiante", style: TextStyle(fontWeight: FontWeight.bold))),
-                          DataColumn(label: Text("Grado y Sección", style: TextStyle(fontWeight: FontWeight.bold))),
-                          DataColumn(label: Text("Promedio Final", style: TextStyle(fontWeight: FontWeight.bold))),
-                        ],
-                        rows: generalAverages.map<DataRow>((avg) {
-                          final student = avg["students"]?["persons"];
-                          final teacherGroup = avg["teachergroups"];
-
-                          final course = teacherGroup?["courses"]?["course"] ?? '—';
-                          final grade = teacherGroup?["grades"]?["grade"] ?? '—';
-                          final section = teacherGroup?["sections"]?["seccion"] ?? '—';
-                          final year = avg["years"]?["year"]?.toString() ?? '—';
-                          final courseAverage = avg["courseAverage"]?.toString() ?? '—';
-
-                          final names = student?["names"] ?? '—';
-                          final lastNames = student?["lastNames"] ?? '';
-                          final fullName = "$names $lastNames".trim();
-
-                          return DataRow(
-                            color: WidgetStateProperty.all(
-                              generalAverages.indexOf(avg) % 2 == 0
-                                  ? Colors.grey.shade50
-                                  : Colors.white,
-                            ),
-                            cells: [
-                              DataCell(Text(year, style: const TextStyle(fontSize: 13))),
-                              DataCell(Text(course, style: const TextStyle(fontSize: 13))),
-                              DataCell(Text(fullName, style: const TextStyle(fontSize: 13))),
-                              DataCell(Text("$grade $section", style: const TextStyle(fontSize: 13))),
-                              DataCell(
-                                Text(
-                                  double.tryParse(courseAverage)?.toStringAsFixed(2) ?? courseAverage,
-                                  style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.blueAccent),
-                                ),
-                              ),
-                            ],
-                          );
-                        }).toList(),
-                      ),
-                    ),
+                    const SizedBox(height: 15),
+                    GeneralAveragesTable(generalAverages: generalAverages.cast<Map<String, dynamic>>()),
                   ],
-                ),
-              )
-            else if (selectedStudentId != null)
-              const Padding(
-                padding: EdgeInsets.all(12.0),
-                child: Text("No se encontraron promedios para este estudiante."),
-              ),
-            const SizedBox(height: 10,),
-            ElevatedButton.icon(
-              onPressed: () async {
-                if (selectedStudentId == null || selectedScheduleId == null || yearIdController.text.isEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("Debe seleccionar año, horario y estudiante.")),
-                  );
-                  return;
-                }
-
-                final url = Uri.parse(
-                    "http://localhost:3000/api/teachingblockaverage/byStudent/$selectedStudentId/year/${yearIdController.text}/assignment/$selectedScheduleId"
-                );
-
-                final res = await http.get(url, headers: {
-                  "Authorization": "Bearer ${token ?? widget.token}",
-                  "Content-Type": "application/json",
-                });
-
-                if (res.statusCode == 200) {
-                  final data = json.decode(res.body);
-                  showModalBottomSheet(
-                    context: context,
-                    builder: (_) => _buildAveragesModal(data),
-                  );
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text("Error al obtener promedios: ${res.body}")),
-                  );
-                }
-              },
-              icon: const Icon(Icons.bar_chart),
-              label: const Text("Ver Promedios de Bloques"),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: appColors[3],
-                foregroundColor: Colors.white,
-              ),
-            ),
-          ],
+                )
+            ],
+          ),
         ),
       ),
     );
   }
+}
 
-  Widget _buildAveragesModal(List data) {
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
+class StudentBlockAveragesDialog extends StatelessWidget {
+  final List<Map<String, dynamic>> blockAverages;
+
+  const StudentBlockAveragesDialog({super.key, required this.blockAverages});
+
+  Color _getNoteColor(double? note) {
+    if (note == null) return Colors.black87;
+    return note >= 11 ? Colors.green[700]! : Colors.red[700]!;
+  }
+
+  Color _getNoteBackground(double? note) {
+    if (note == null) return Colors.transparent;
+    return note >= 11
+        ? Colors.green.withOpacity(0.08)
+        : Colors.red.withOpacity(0.08);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Column(
+        mainAxisAlignment: MainAxisAlignment.start,
         children: [
-          const Text("Promedios por Bloque Lectivo",
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-          const Divider(),
-          ...data.map((item) {
-            final block = item["teachingblocks"]["teachingBlock"];
-            final avg = item["teachingBlockAvarage"];
-            return ListTile(
-              title: Text(block),
-              trailing: Text(avg.toString(), style: const TextStyle(fontWeight: FontWeight.bold)),
-            );
-          }).toList(),
-          const SizedBox(height: 10),
-          ElevatedButton.icon(
-            onPressed: () async {
-              final url = Uri.parse("http://localhost:3000/api/generalAvarage/calculate");
-              final res = await http.post(
-                url,
-                headers: {
-                  "Authorization": "Bearer ${token ?? widget.token}",
-                  "Content-Type": "application/json",
-                },
-                body: json.encode({
-                  "studentId": selectedStudentId,
-                  "assignmentId": selectedScheduleId,
-                  "yearId": yearIdController.text
-                }),
-              );
-
-              if (res.statusCode == 200) {
-                final result = json.decode(res.body);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(result["message"] ?? "Promedio general calculado.")),
-                );
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text("Error al calcular: ${res.body}")),
-                );
-              }
-            },
-            icon: const Icon(Icons.summarize),
-            label: const Text("Calcular Promedio Anual"),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green,
-              foregroundColor: Colors.white,
-            ),
+          Row(
+            children: [
+              Icon(Icons.bar_chart, color: appColors[3]),
+              const SizedBox(width: 8),
+              const Text(
+                "Promedios por Bloques Lectivos del Curso",
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+              ),
+            ],
           ),
+          const Divider(),
         ],
       ),
+      content: Container(
+        width: 600,
+        child: blockAverages.isEmpty
+            ? const Padding(
+          padding: EdgeInsets.all(15),
+          child: Text("No hay promedios registrados."),
+        )
+            : SingleChildScrollView(
+          child: DataTable(
+            headingRowColor:
+            MaterialStateProperty.all(Colors.indigo.shade50),
+            columnSpacing: 18,
+            columns: const [
+              DataColumn(label: Text("Bloque")),
+              DataColumn(label: Text("P. Diario")),
+              DataColumn(label: Text("P. Prácticas")),
+              DataColumn(label: Text("P. Exámenes")),
+              DataColumn(label: Text("P. Final")),
+            ],
+            rows: blockAverages.map((item) {
+              final block = item["teachingblocks"]?["teachingBlock"] ?? "—";
+              final daily = double.tryParse(item["dailyAvarage"]?.toString() ?? "");
+              final practices = double.tryParse(item["practiceAvarage"]?.toString() ?? "");
+              final exams = double.tryParse(item["examAvarage"]?.toString() ?? "");
+              final total = double.tryParse(item["teachingBlockAvarage"]?.toString() ?? "");
+
+              return DataRow(cells: [
+                DataCell(Text(block)),
+                DataCell(Container(
+                  color: _getNoteBackground(daily),
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  child: Text(
+                    daily != null ? daily.toStringAsFixed(2) : "—",
+                    style: TextStyle(color: _getNoteColor(daily)),
+                  ),
+                )),
+                DataCell(Container(
+                  color: _getNoteBackground(practices),
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  child: Text(
+                    practices != null ? practices.toStringAsFixed(2) : "—",
+                    style: TextStyle(color: _getNoteColor(practices)),
+                  ),
+                )),
+                DataCell(Container(
+                  color: _getNoteBackground(exams),
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  child: Text(
+                    exams != null ? exams.toStringAsFixed(2) : "—",
+                    style: TextStyle(color: _getNoteColor(exams)),
+                  ),
+                )),
+                DataCell(Container(
+                  color: _getNoteBackground(total),
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  child: Text(
+                    total != null ? total.toStringAsFixed(2) : "—",
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: _getNoteColor(total),
+                    ),
+                  ),
+                )),
+              ]);
+            }).toList(),
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text("Cerrar"),
+        ),
+      ],
     );
   }
+}
+
+class GeneralAveragesTable extends StatelessWidget {
+  final List<Map<String, dynamic>> generalAverages;
+  const GeneralAveragesTable({super.key, required this.generalAverages});
+
+  @override
+  Widget build(BuildContext context) {
+    // 1. Crear la fuente de datos
+    final dataSource = _GeneralAveragesDataSource(generalAverages: generalAverages);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // El widget PaginatedDataTable maneja automáticamente el scroll horizontal
+        // y la paginación, logrando el comportamiento deseado.
+        SizedBox( // Usamos SizedBox para que el PaginatedDataTable se estire.
+          width: double.infinity,
+          child: PaginatedDataTable(
+            columns: const [
+              DataColumn(label: Text("Año", style: TextStyle(fontWeight: FontWeight.bold))),
+              DataColumn(label: Text("Curso", style: TextStyle(fontWeight: FontWeight.bold))),
+              DataColumn(label: Text("Estudiante", style: TextStyle(fontWeight: FontWeight.bold))),
+              DataColumn(label: Text("Grado y Sección", style: TextStyle(fontWeight: FontWeight.bold))),
+              DataColumn(label: Text("Prom. BL1", style: TextStyle(fontWeight: FontWeight.bold))),
+              DataColumn(label: Text("Prom. BL2", style: TextStyle(fontWeight: FontWeight.bold))),
+              DataColumn(label: Text("Prom. BL3", style: TextStyle(fontWeight: FontWeight.bold))),
+              DataColumn(label: Text("Prom. BL4", style: TextStyle(fontWeight: FontWeight.bold))),
+              DataColumn(label: Text("Promedio Final", style: TextStyle(fontWeight: FontWeight.bold))),
+            ],
+            source: dataSource,
+            rowsPerPage: 15,
+            availableRowsPerPage: const [10, 15, 20, 30],
+            showCheckboxColumn: false,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _GeneralAveragesDataSource extends DataTableSource {
+  final List<Map<String, dynamic>> generalAverages;
+
+  _GeneralAveragesDataSource({required this.generalAverages});
+
+  // Helper functions (duplicadas de GeneralAveragesTable)
+  Color _getNoteColor(double? note) {
+    if (note == null) return Colors.black87;
+    return note >= 11 ? Colors.green[700]! : Colors.red[700]!;
+  }
+
+  Color _getNoteBackground(double? note) {
+    if (note == null) return Colors.transparent;
+    return note >= 11
+        ? Colors.green.withOpacity(0.08)
+        : Colors.red.withOpacity(0.08);
+  }
+
+  // Helper widget para las celdas de notas
+  DataCell _buildNoteCell(double? note) {
+    return DataCell(Container(
+      color: _getNoteBackground(note),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      child: Text(
+        note != null ? note.toStringAsFixed(2) : "—",
+        style: TextStyle(
+          color: _getNoteColor(note),
+          fontWeight: note != null ? FontWeight.w600 : FontWeight.normal,
+        ),
+      ),
+    ));
+  }
+
+  @override
+  DataRow? getRow(int index) {
+    if (index >= generalAverages.length) {
+      return null;
+    }
+
+    final avg = generalAverages[index];
+    final student = avg["students"]?["persons"];
+    final teacherGroup = avg["teachergroups"];
+
+    final course = teacherGroup?["courses"]?["course"] ?? '—';
+    final grade = teacherGroup?["grades"]?["grade"] ?? '—';
+    final section = teacherGroup?["sections"]?["seccion"] ?? '—';
+    final year = avg["years"]?["year"]?.toString() ?? '—';
+    final courseAverage = double.tryParse(avg["courseAverage"]?.toString() ?? "");
+    final pbl1 = double.tryParse(avg['block1Average']?.toString() ?? "");
+    final pbl2 = double.tryParse(avg['block2Average']?.toString() ?? "");
+    final pbl3 = double.tryParse(avg['block3Average']?.toString() ?? "");
+    final pbl4 = double.tryParse(avg['block4Average']?.toString() ?? "");
+    final names = student?["names"] ?? '—';
+    final lastNames = student?["lastNames"] ?? '';
+    final fullName = "$names $lastNames".trim();
+
+    return DataRow(
+      color: index % 2 == 0
+          ? WidgetStateProperty.all(Colors.grey.shade50)
+          : WidgetStateProperty.all(Colors.white),
+      cells: [
+        DataCell(Text(year)),
+        DataCell(Text(course)),
+        DataCell(Text(fullName)),
+        DataCell(Text("$grade $section")),
+        _buildNoteCell(pbl1),
+        _buildNoteCell(pbl2),
+        _buildNoteCell(pbl3),
+        _buildNoteCell(pbl4),
+        _buildNoteCell(courseAverage), // Promedio Final
+      ],
+    );
+  }
+
+  @override
+  bool get isRowCountApproximate => false;
+
+  @override
+  int get rowCount => generalAverages.length;
+
+  @override
+  int get selectedRowCount => 0;
 }

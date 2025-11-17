@@ -19,6 +19,7 @@ class _UsersScreenState extends State<UsersScreen> {
   TextEditingController userNameController = TextEditingController();
   TextEditingController passwordController = TextEditingController();
   TextEditingController roleController = TextEditingController();
+  TextEditingController chargeDetailController = TextEditingController();
   TextEditingController statusController = TextEditingController();
   TextEditingController createdAtController = TextEditingController();
   TextEditingController updatedAtController = TextEditingController();
@@ -34,10 +35,10 @@ class _UsersScreenState extends State<UsersScreen> {
 
   Future<void> saveUser() async {
     if(
-    personIdController.text.trim().isEmpty ||
-        userNameController.text.trim().isEmpty ||
-        passwordController.text.trim().isEmpty ||
-        roleController.text.trim().isEmpty
+      personIdController.text.trim().isEmpty ||
+      userNameController.text.trim().isEmpty ||
+      passwordController.text.trim().isEmpty ||
+      roleController.text.trim().isEmpty
     ){
       CustomNotifications.showNotification(context, "Algunos campos aún están vacíos.", color: Colors.red);
       return;
@@ -58,6 +59,7 @@ class _UsersScreenState extends State<UsersScreen> {
           "userName": userNameController.text,
           "passwordHash": passwordController.text,
           "role": roleController.text,
+          "chargeDetail": chargeDetailController,
         }),
       );
 
@@ -138,6 +140,7 @@ class _UsersScreenState extends State<UsersScreen> {
           "userName": userNameController.text,
           "passwordHash": passwordController.text,
           "role": roleController.text,
+          "chargeDetail": chargeDetailController.text
         }),
       );
 
@@ -183,6 +186,7 @@ class _UsersScreenState extends State<UsersScreen> {
     personIdController.clear();
     userNameController.clear();
     passwordController.clear();
+    chargeDetailController.clear();
     roleController.clear();
     statusController.clear();
     createdAtController.clear();
@@ -212,6 +216,7 @@ class _UsersScreenState extends State<UsersScreen> {
       personDisplayController.text = '${user['persons']['id']} - ${user['persons']['names']} ${user['persons']['lastNames']}';
       userNameController.text = user['userName'];
       passwordController.text = user['passwordHash'];
+      chargeDetailController.text = user['chargeDetail'];
       roleController.text = user['role'];
       statusController.text = user['status'].toString();
       createdAtController.text = user['createdAt'].toString();
@@ -261,16 +266,15 @@ class _UsersScreenState extends State<UsersScreen> {
         focusNode: FocusNode(),
         selectionControls: materialTextSelectionControls,
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(10),
+          padding: const EdgeInsets.all(15),
           child: Column(
             children: [
               Card(
-                margin: const EdgeInsets.only(bottom: 20),
                 child: ExpansionTile(
                   title: const Text('Registrar/Actualizar Usuario'),
                   subtitle: const Text('Toca para abrir el formulario'),
                   leading: const Icon(Icons.add_box),
-                  childrenPadding: const EdgeInsets.all(16.0),
+                  childrenPadding: const EdgeInsets.all(15),
                   children: [
                     CommonInfoFields(idController: idController, statusController: statusController),
                     const SizedBox(height: 10),
@@ -278,7 +282,7 @@ class _UsersScreenState extends State<UsersScreen> {
                       children: [
                         Expanded(
                           child: SelectionField(
-                              hintText: "Seleccionar Persona",
+                              labelText: "Seleccionar Persona",
                               displayController: personDisplayController,
                               idController: personIdController,
                               onTap: () async => await showPersonsForUsersSelection(context, personIdController, personDisplayController, newRole: roleController.text.isNotEmpty ? roleController.text : null)
@@ -287,7 +291,7 @@ class _UsersScreenState extends State<UsersScreen> {
                         const SizedBox(width: 10),
                         Expanded(
                           child: SelectionField(
-                            hintText: "Seleccionar Rol",
+                            labelText: "Seleccionar Rol",
                             displayController: roleController,
                             onTap: () async {
                               await showPrivilegeSelection(
@@ -318,7 +322,6 @@ class _UsersScreenState extends State<UsersScreen> {
                               style: const TextStyle(fontSize: 13),
                               decoration: InputDecoration(
                                 labelText: "Contraseña",
-                                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
                                 enabled: idToEdit != null? false : true,
                                 suffixIcon: IconButton(
                                   icon: Icon(_showPassword ? Icons.visibility : Icons.visibility_off),
@@ -328,8 +331,10 @@ class _UsersScreenState extends State<UsersScreen> {
                                     });
                                   },
                                 ),
-                                border: OutlineInputBorder( // Added border
-                                  borderRadius: BorderRadius.circular(8.0),
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: const BorderSide(width: 1, color: Colors.black,),
                                 ),
                                 filled: true,
                                 fillColor: Colors.grey[100],
@@ -340,35 +345,47 @@ class _UsersScreenState extends State<UsersScreen> {
                       ],
                     ),
                     const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: CustomTextField(label: "Cargo (Opcional)", controller: chargeDetailController),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
                     CommonTimestampsFields(createdAtController: createdAtController, updatedAtController: updatedAtController),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 10),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
-                        IconButton(onPressed: saveUser, icon: Icon(Icons.save, color: appColors[3]),),
-                        IconButton(onPressed: cancelUpdate, icon: const Icon(Icons.clear_all, color: Colors.deepOrange)),
-                        IconButton(onPressed: updateUser, icon: Icon(Icons.update, color: appColors[8])),
+                        IconButton(onPressed: saveUser, icon: Icon(Icons.save, color: appColors[3]), tooltip: 'Guardar'),
+                        IconButton(onPressed: cancelUpdate, icon: const Icon(Icons.clear_all, color: Colors.deepOrange), tooltip: 'Cancelar Actualización'),
+                        IconButton(onPressed: updateUser, icon: Icon(Icons.update, color: appColors[8]), tooltip: 'Actualizar'),
                       ],
                     ),
                   ],
                 ),
               ),
               // Sección de la tabla de datos
-              const Divider(height: 20),
-              const Text("Usuarios Registrados", style: TextStyle(fontWeight: FontWeight.bold)),
-              const SizedBox(height: 20),
-              TextField(
-                controller: searchController,
-                decoration: const InputDecoration(
-                  labelText: 'Buscar por nombres o apellidos',
-                  prefixIcon: Icon(Icons.search),
-                  border: OutlineInputBorder(),
-                ),
-                onChanged: (value) {
-                  filterUsers(value);
-                },
+              const SizedBox(height: 15),
+              const CustomTitleWidget(
+                child: Text('Usuarios Registrados', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white)),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 15),
+              CustomInputContainer(
+                child: TextField(
+                  controller: searchController,
+                  decoration: const InputDecoration(
+                    labelText: 'Buscar',
+                    prefixIcon: Icon(Icons.search, color: Colors.teal),
+                    border: InputBorder.none,
+                  ),
+                  onChanged: (value) {
+                    filterUsers(value);
+                  },
+                ),
+              ),
+              const SizedBox(height: 15),
               SingleChildScrollView(
                 child: ConstrainedBox(
                   constraints: BoxConstraints(minWidth: MediaQuery.of(context).size.width),
@@ -378,18 +395,17 @@ class _UsersScreenState extends State<UsersScreen> {
                       DataColumn(label: Text('(ID) Nombres y Apellidos')),
                       DataColumn(label: Text('Usuario')),
                       DataColumn(label: Text('Rol')),
-                      DataColumn(label: Text('Estado')),
-                      DataColumn(label: Text('Creado')),
+                      DataColumn(label: Text('Cargo')),
                       DataColumn(label: Text('Acciones')),
                     ],
                     source: _usersDataSource, // Our custom data source
-                    rowsPerPage: 10, // Set 15 rows per page
+                    rowsPerPage: 25, // Set 15 rows per page
                     onPageChanged: (int page) {
                       // Optional: You can add logic here if you need to do something when the page changes
                       print('Page changed to: $page');
                     },
                     // Optional: Adjust available rows per page options
-                    availableRowsPerPage: const [5, 10, 15, 20, 50],
+                    availableRowsPerPage: const [5, 15, 25, 35, 50],
                     showCheckboxColumn: false, // Hide checkboxes if not needed
                   ),
                 ),
@@ -424,18 +440,26 @@ class _UsersDataSource extends DataTableSource {
         DataCell(Text(user['id'].toString())),
         DataCell(Text('(${user['persons']['id']}) ${user['persons']['names']} ${user['persons']['lastNames']}')),
         DataCell(Text(user['userName'])),
-        DataCell(Text(user['role'])),
-        DataCell(Text(user['status'] == true ? 'Activo' : 'Inactivo')),
-        DataCell(Text(user['createdAt'].toString())),
+        DataCell(Text(user['role'] ?? '-')),
+        DataCell(Text(user['chargeDetail'] ?? '-')),
+        //DataCell(Text(user['status'] == true ? 'Activo' : 'Inactivo')),
+        //DataCell(Text(user['createdAt'].toString())),
         DataCell(Row(
           children: [
             IconButton(
-              icon: const Icon(Icons.edit, color: Colors.blue),
+              icon: Icon(Icons.info_outline, color: appColors[9]),
+              onPressed: () {},
+              tooltip: 'Más Información',
+            ),
+            IconButton(
+              icon: Icon(Icons.edit, color: appColors[3]),
               onPressed: () => onEdit(user),
+              tooltip: 'Editar Usuario',
             ),
             IconButton(
               icon: const Icon(Icons.delete, color: Colors.red),
               onPressed: () => onDelete(user['id']),
+              tooltip: 'Eliminar Usuario',
             ),
           ],
         )),

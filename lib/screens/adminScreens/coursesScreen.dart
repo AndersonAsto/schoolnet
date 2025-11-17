@@ -16,6 +16,7 @@ class CoursesScreen extends StatefulWidget {
 class _CoursesScreenState extends State<CoursesScreen> {
   TextEditingController idController = TextEditingController();
   TextEditingController courseController = TextEditingController();
+  TextEditingController recurrenceController = TextEditingController();
   TextEditingController statusController = TextEditingController();
   TextEditingController createdAtController = TextEditingController();
   TextEditingController updatedAtController = TextEditingController();
@@ -41,7 +42,10 @@ class _CoursesScreenState extends State<CoursesScreen> {
       final response = await http.post(
         url,
         headers: {"Content-Type": "application/json"},
-        body: jsonEncode({"course": courseController.text}),
+        body: jsonEncode({
+          "course": courseController.text,
+          "descripcion": recurrenceController.text
+        }),
       );
       if (response.statusCode == 201) {
         final data = jsonDecode(response.body);
@@ -107,7 +111,10 @@ class _CoursesScreenState extends State<CoursesScreen> {
       final response = await http.put(
         url,
         headers: {"Content-Type": "application/json"},
-        body: jsonEncode({"course": courseController.text}),
+        body: jsonEncode({
+          "course": courseController.text,
+          "descripcion": recurrenceController.text
+        }),
       );
 
       if (response.statusCode == 200) {
@@ -146,9 +153,11 @@ class _CoursesScreenState extends State<CoursesScreen> {
       print("Error de conexión al eliminar curso: $e");
     }
   }
+
   void clearTextFields (){
     idController.clear();
     courseController.clear();
+    recurrenceController.clear();
     statusController.clear();
     createdAtController.clear();
     updatedAtController.clear();
@@ -172,6 +181,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
       idToEdit = course['id'];
       idController.text = course['id'].toString();
       courseController.text = course['course'];
+      recurrenceController.text = course['descripcion'].toString();
       statusController.text = course['status'].toString();
       createdAtController.text = course['createdAt'].toString();
       updatedAtController.text = course['updatedAt'].toString();
@@ -182,7 +192,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
     final lowerQuery = query.toLowerCase();
     setState(() {
       filteredCoursesList = coursesList.where((course) {
-        final nombre = course['course']?.toLowerCase() ?? '';
+        final nombre = '${course['course']} ${course['descripcion'].toString()}'.toLowerCase() ?? '';
         return nombre.contains(lowerQuery);
       }).toList();
 
@@ -217,16 +227,15 @@ class _CoursesScreenState extends State<CoursesScreen> {
         selectionControls: materialTextSelectionControls,
         focusNode: FocusNode(),
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(10),
+          padding: const EdgeInsets.all(15),
           child: Column(
             children: [
               Card(
-                margin: const EdgeInsets.only(bottom: 20),
                 child: ExpansionTile(
                   title: const Text('Registrar/Actualizar Curso'),
                   subtitle: const Text('Toca para abrir el formulario'),
                   leading: const Icon(Icons.add_box),
-                  childrenPadding: const EdgeInsets.all(10),
+                  childrenPadding: const EdgeInsets.all(15),
                   children: [
                     CommonInfoFields(idController: idController, statusController: statusController),
                     const SizedBox(height: 10),
@@ -235,39 +244,49 @@ class _CoursesScreenState extends State<CoursesScreen> {
                         Expanded(
                           child: CustomTextField(label: "Curso", controller: courseController, inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r"[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]"))]),
                         ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: CustomTextField(
+                            label: "Recurrencia",
+                            controller: recurrenceController,
+                            keyboardType: TextInputType.number,
+                          ),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 10),
                     CommonTimestampsFields(createdAtController: createdAtController, updatedAtController: updatedAtController),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 10),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
-                        IconButton(onPressed: saveCourse, icon: Icon(Icons.save, color: appColors[3]),),
-                        IconButton(onPressed: cancelUpdate, icon: const Icon(Icons.clear_all, color: Colors.deepOrange)),
-                        IconButton(onPressed: updateCourse, icon: Icon(Icons.update, color: appColors[8])),
+                        IconButton(onPressed: saveCourse, icon: Icon(Icons.save, color: appColors[3]), tooltip: 'Guardar',),
+                        IconButton(onPressed: cancelUpdate, icon: const Icon(Icons.clear_all, color: Colors.deepOrange), tooltip: 'Cancelar Actualización'),
+                        IconButton(onPressed: updateCourse, icon: Icon(Icons.update, color: appColors[8]), tooltip: 'Actualizar'),
                       ],
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 20),
-              const Text("Cursos Registrados", style: TextStyle(fontWeight: FontWeight.bold)),
-              const SizedBox(height: 20),
-              TextField(
-                controller: searchController,
-                decoration: InputDecoration(
-                  labelText: 'Buscar por nombre',
-                  prefixIcon: const Icon(Icons.search, color: Colors.teal,),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                onChanged: (value) {
-                  filterCourses(value);
-                },
+              const SizedBox(height: 15),
+              const CustomTitleWidget(
+                child: Text('Cursos Registrados', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white)),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 15),
+              CustomInputContainer(
+                child: TextField(
+                  controller: searchController,
+                  decoration: const InputDecoration(
+                    labelText: 'Buscar',
+                    prefixIcon: Icon(Icons.search, color: Colors.teal),
+                    border: InputBorder.none,
+                  ),
+                  onChanged: (value) {
+                    filterCourses(value);
+                  },
+                ),
+              ),
+              const SizedBox(height: 15),
               SingleChildScrollView(
                 child: ConstrainedBox(
                   constraints: BoxConstraints(minWidth: MediaQuery.of(context).size.width),
@@ -275,6 +294,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
                     columns: const [
                       DataColumn(label: Text('ID')),
                       DataColumn(label: Text('Grado')),
+                      DataColumn(label: Text('Recurrencia')),
                       DataColumn(label: Text('Estado')),
                       DataColumn(label: Text('Creado')),
                       DataColumn(label: Text('Actualizado')),
@@ -319,18 +339,21 @@ class _CoursesDataSource extends DataTableSource{
       cells: [
         DataCell(Text(course['id'].toString())),
         DataCell(Text(course['course'])),
+        DataCell(Text(course['descripcion'])),
         DataCell(Text(course['status'] == true ? 'Activo' : 'Inactivo')),
         DataCell(Text(course['createdAt'].toString())),
         DataCell(Text(course['updatedAt'].toString())),
         DataCell(Row(
           children: [
             IconButton(
-              icon: const Icon(Icons.edit, color: Colors.blue),
+              icon: Icon(Icons.edit, color: appColors[3]),
               onPressed: () => onEdit(course),
+              tooltip: 'Editar Curso',
             ),
             IconButton(
               icon: const Icon(Icons.delete, color: Colors.red),
               onPressed: () => onDelete(course['id']),
+              tooltip: 'Eliminar Curso',
             ),
           ],
         )),

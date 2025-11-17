@@ -32,13 +32,13 @@ class _SectionsScreensState extends State<SectionsScreens> {
   Future<void> saveSection() async {
     if (sectionController.text.trim().isEmpty) {
       CustomNotifications.showNotification(
-          context, "El nombre del grado no puede estar vacío.",
+          context, "El nombre de la sección no puede estar vacío.",
           color: appColors[0]);
       return;
     }
     if (idToEdit != null) {
       CustomNotifications.showNotification(context,
-          "Estás editando un grado. Cancela la edición para guardar uno nuevo.",
+          "Estás editando una sección. Cancela la edición para guardar uno nuevo.",
           color: appColors[0]);
       return;
     }
@@ -61,17 +61,18 @@ class _SectionsScreensState extends State<SectionsScreens> {
         clearTextFields();
         idToEdit = null;
         await getSections();
-        CustomNotifications.showNotification(context, "Grado guardado correctamente",
+        CustomNotifications.showNotification(
+            context, "Sección guardada correctamente",
             color: Colors.teal);
       } else {
-        CustomNotifications.showNotification(context, "Error al guardar grado",
+        CustomNotifications.showNotification(context, "Error al guardar sección",
             color: appColors[0]);
-        print("Error al guardar grado: ${response.body}");
+        print("Error al guardar sección: ${response.body}");
       }
     } catch (e) {
       CustomNotifications.showNotification(context, "Error de conexión: $e",
           color: appColors[0]);
-      print("Error de conexión al guardar grado: $e");
+      print("Error de conexión al guardar sección: $e");
     }
   }
 
@@ -91,27 +92,27 @@ class _SectionsScreensState extends State<SectionsScreens> {
           );
         });
       } else {
-        CustomNotifications.showNotification(context, "Error al obtener grados",
+        CustomNotifications.showNotification(context, "Error al obtener secciones",
             color: appColors[0]);
-        print("Error al obtener grados: ${response.body}");
+        print("Error al obtener secciones: ${response.body}");
       }
     } catch (e) {
       CustomNotifications.showNotification(context, "Error de conexión: $e",
           color: appColors[0]);
-      print("Error de conexión al obtener grados: $e");
+      print("Error de conexión al obtener secciones: $e");
     }
   }
 
   Future<void> updateSection() async {
     if (idToEdit == null) {
       CustomNotifications.showNotification(
-          context, "Selecciona un grado para actualizar",
+          context, "Selecciona una sección para actualizar",
           color: appColors[0]);
       return;
     }
     if (sectionController.text.trim().isEmpty) {
       CustomNotifications.showNotification(
-          context, "El nombre del grado no puede estar vacío.",
+          context, "El nombre de la sección no puede estar vacío.",
           color: appColors[0]);
       return;
     }
@@ -132,17 +133,18 @@ class _SectionsScreensState extends State<SectionsScreens> {
         });
         await getSections();
         CustomNotifications.showNotification(
-            context, "Grado actualizado correctamente",
+            context, "Sección actualizada correctamente",
             color: Colors.teal);
       } else {
-        CustomNotifications.showNotification(context, "Error al actualizar grado",
+        CustomNotifications.showNotification(
+            context, "Error al actualizar sección",
             color: appColors[0]);
-        print("Error al actualizar grado: ${response.body}");
+        print("Error al actualizar sección: ${response.body}");
       }
     } catch (e) {
       CustomNotifications.showNotification(context, "Error de conexión: $e",
           color: appColors[0]);
-      print("Error de conexión al actualizar grado: $e");
+      print("Error de conexión al actualizar sección: $e");
     }
   }
 
@@ -152,20 +154,20 @@ class _SectionsScreensState extends State<SectionsScreens> {
       final response = await http.delete(url);
 
       if (response.statusCode == 200) {
-        print("Grado eliminado: $id");
+        print("Sección eliminada: $id");
         await getSections();
         CustomNotifications.showNotification(
-            context, "Grado eliminado correctamente",
+            context, "Sección eliminada correctamente",
             color: Colors.teal);
       } else {
-        CustomNotifications.showNotification(context, "Error al eliminar grado",
+        CustomNotifications.showNotification(context, "Error al eliminar sección",
             color: appColors[0]);
-        print("Error al eliminar grado: ${response.body}");
+        print("Error al eliminar sección: ${response.body}");
       }
     } catch (e) {
       CustomNotifications.showNotification(context, "Error de conexión: $e",
           color: appColors[0]);
-      print("Error de conexión al eliminar grado: $e");
+      print("Error de conexión al eliminar sección: $e");
     }
   }
 
@@ -238,110 +240,97 @@ class _SectionsScreensState extends State<SectionsScreens> {
         automaticallyImplyLeading: false,
         backgroundColor: appColors[3],
       ),
-        body: SelectableRegion(
-          focusNode: FocusNode(),
-          selectionControls: materialTextSelectionControls,
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(10),
-            child: Column(
-              children: [
-                // Card con ExpansionTile para el formulario
-                Card(
-                  margin: const EdgeInsets.only(bottom: 20),
-                  child: ExpansionTile(
-                    title: const Text('Registrar/Actualizar Sección'),
-                    subtitle: const Text('Toca para abrir el formulario'),
-                    leading: const Icon(Icons.add_box),
-                    childrenPadding: const EdgeInsets.all(16.0),
-                    children: [
-                      CommonInfoFields(
-                          idController: idController,
-                          statusController: statusController),
-                      const SizedBox(height: 10),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: CustomTextField(
-                                label: "Grado",
-                                controller: sectionController,
-                                inputFormatters: [
-                                  FilteringTextInputFormatter.allow(
-                                      RegExp(r"[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]"))
-                                ]),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 10),
-                      CommonTimestampsFields(
-                          createdAtController: createdAtController,
-                          updatedAtController: updatedAtController),
-                      const SizedBox(height: 20),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        children: [
-                          IconButton(
-                            onPressed: saveSection,
-                            icon: Icon(Icons.save, color: appColors[3]),
-                          ),
-                          IconButton(
-                              onPressed: cancelUpdate,
-                              icon: const Icon(Icons.clear_all,
-                                  color: Colors.deepOrange)),
-                          IconButton(
-                              onPressed: updateSection,
-                              icon: Icon(Icons.update, color: appColors[8])),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                // Sección de la tabla de datos
-                const Divider(height: 30),
-                const Text("Grados Registrados",
-                    style: TextStyle(fontWeight: FontWeight.bold)),
-                const SizedBox(height: 20),
-                TextField(
-                  controller: searchController,
-                  decoration: InputDecoration(
-                    labelText: 'Buscar por nombre',
-                    prefixIcon: const Icon(Icons.search, color: Colors.teal),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
+      body: SelectableRegion(
+        focusNode: FocusNode(),
+        selectionControls: materialTextSelectionControls,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(15),
+          child: Column(
+            children: [
+              // Card con ExpansionTile para el formulario
+              Card(
+                child: ExpansionTile(
+                  title: const Text('Registrar/Actualizar Sección'),
+                  subtitle: const Text('Toca para abrir el formulario'),
+                  leading: const Icon(Icons.add_box),
+                  childrenPadding: const EdgeInsets.all(15),
+                  children: [
+                    CommonInfoFields(idController: idController, statusController: statusController),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: CustomTextField(
+                            label: "Sección",
+                            controller: sectionController,
+                            inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r"[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]"))]),
+                        ),
+                      ],
                     ),
+                    const SizedBox(height: 10),
+                    CommonTimestampsFields(
+                        createdAtController: createdAtController,
+                        updatedAtController: updatedAtController),
+                    const SizedBox(height: 10),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        IconButton(onPressed: saveSection, icon: Icon(Icons.save, color: appColors[3]), tooltip: 'Guardar'),
+                        IconButton(onPressed: cancelUpdate, icon: const Icon(Icons.clear_all, color: Colors.deepOrange), tooltip: 'Cancelar Actualización'),
+                        IconButton(onPressed: updateSection, icon: Icon(Icons.update, color: appColors[8]), tooltip: 'Actualizar'),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              // Sección de la tabla de datos
+              const SizedBox(height: 15),
+              const CustomTitleWidget(
+                child: Text('Secciones Registradas', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white)),
+              ),
+              const SizedBox(height: 15),
+              CustomInputContainer(
+                child: TextField(
+                  controller: searchController,
+                  decoration: const InputDecoration(
+                    labelText: 'Buscar',
+                    prefixIcon: Icon(Icons.search, color: Colors.teal),
+                    border: InputBorder.none,
                   ),
                   onChanged: (value) {
                     filterSections(value);
                   },
                 ),
-                const SizedBox(height: 20),
-                SingleChildScrollView(
-                    child: ConstrainedBox(
-                  constraints: BoxConstraints(
-                      minWidth: MediaQuery.of(context).size.width),
-                  child: PaginatedDataTable(
-                    columns: const [
-                      DataColumn(label: Text('ID')),
-                      DataColumn(label: Text('Grado')),
-                      DataColumn(label: Text('Estado')),
-                      DataColumn(label: Text('Creado')),
-                      DataColumn(label: Text('Actualizado')),
-                      DataColumn(label: Text('Acciones')),
-                    ],
-                    source: _sectionsDataSource,
-                    rowsPerPage: 5,
-                    onPageChanged: (int page) {
-                      if (kDebugMode) {
-                        print('Page changed to: $page');
-                      }
-                    },
-                    availableRowsPerPage: const [5, 10, 15, 20, 50],
-                    showCheckboxColumn: false,
-                  ),
-                )),
-              ],
-            ),
+              ),
+              const SizedBox(height: 15),
+              SingleChildScrollView(
+                  child: ConstrainedBox(
+                constraints:
+                    BoxConstraints(minWidth: MediaQuery.of(context).size.width),
+                child: PaginatedDataTable(
+                  columns: const [
+                    DataColumn(label: Text('ID')),
+                    DataColumn(label: Text('Sección')),
+                    DataColumn(label: Text('Estado')),
+                    DataColumn(label: Text('Creado')),
+                    DataColumn(label: Text('Actualizado')),
+                    DataColumn(label: Text('Acciones')),
+                  ],
+                  source: _sectionsDataSource,
+                  rowsPerPage: 5,
+                  onPageChanged: (int page) {
+                    if (kDebugMode) {
+                      print('Page changed to: $page');
+                    }
+                  },
+                  availableRowsPerPage: const [5, 10, 15, 20, 50],
+                  showCheckboxColumn: false,
+                ),
+              )),
+            ],
           ),
         ),
+      ),
     );
   }
 }
@@ -373,12 +362,14 @@ class _SectionsDataSource extends DataTableSource {
         DataCell(Row(
           children: [
             IconButton(
-              icon: Icon(Icons.edit, color: Colors.blue),
+              icon: Icon(Icons.edit, color: appColors[3]),
               onPressed: () => onEdit(grade),
+              tooltip: 'Editar Sección',
             ),
             IconButton(
-              icon: Icon(Icons.delete, color: Colors.red),
+              icon: const Icon(Icons.delete, color: Colors.red),
               onPressed: () => onDelete(grade['id']),
+              tooltip: 'Eliminar Sección',
             ),
           ],
         )),

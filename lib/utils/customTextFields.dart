@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:schoolnet/utils/colors.dart';
 
 class CommonInfoFields extends StatelessWidget {
   final TextEditingController idController;
@@ -139,6 +140,8 @@ class CustomTextField extends StatelessWidget {
   final bool enabled;
   final TextInputType? keyboardType;
   final List<TextInputFormatter>? inputFormatters;
+  final bool readOnly;
+  final VoidCallback? onTap;
 
   const CustomTextField({
     Key? key,
@@ -147,6 +150,8 @@ class CustomTextField extends StatelessWidget {
     this.enabled = true,
     this.keyboardType,
     this.inputFormatters,
+    this.readOnly = false,
+    this.onTap
   }) : super(key: key);
 
   @override
@@ -158,25 +163,115 @@ class CustomTextField extends StatelessWidget {
           height: 36,
           child: TextField(
             decoration: InputDecoration(
+              filled: true,
+              fillColor: Colors.grey[100],
               labelText: label,
               contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(
-                  width: 1,
-                  color: Colors.black,
-                ),
+                borderSide: const BorderSide(width: 1, color: Colors.black,),
               ),
             ),
-            style: TextStyle(fontSize: 13),
+            style: const TextStyle(fontSize: 13),
             controller: controller,
             enabled: enabled,
             keyboardType: keyboardType,
             inputFormatters: inputFormatters,
+            readOnly: readOnly,
+            onTap: onTap,
           ),
         ),
         ),
       ],
+    );
+  }
+}
+
+class CustomInputContainer extends StatelessWidget {
+  final Widget child;
+  final EdgeInsetsGeometry padding;
+  final Color? color;
+
+  const CustomInputContainer({
+    super.key,
+    required this.child,
+    this.padding = const EdgeInsets.all(10),
+    this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: padding,
+      decoration: BoxDecoration(
+        color: color ?? Colors.grey[100],
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: const [
+          BoxShadow(
+            color: Colors.black12,
+            blurRadius: 4,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: child,
+    );
+  }
+}
+
+class CustomTitleWidget extends StatelessWidget {
+  final Widget child;
+  final EdgeInsetsGeometry padding;
+  final Color? color;
+
+  const CustomTitleWidget({
+    super.key,
+    required this.child,
+    this.padding = const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+    this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: padding,
+      decoration: BoxDecoration(
+        color: appColors[3],
+        borderRadius: BorderRadius.circular(10),
+      ),
+      height: 40,
+      alignment: Alignment.center,
+      child: child,
+    );
+  }
+}
+
+class CustomElevatedButtonIcon extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final VoidCallback? onPressed;
+
+  const CustomElevatedButtonIcon({
+    super.key,
+    required this.label,
+    required this.icon,
+    this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ElevatedButton.icon(
+      icon: Icon(icon, color: Colors.white),
+      onPressed: onPressed,
+      style: ElevatedButton.styleFrom(
+        backgroundColor: appColors[3],
+        foregroundColor: Colors.white,
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
+      ),
+      label: Text(label, style: const TextStyle(color: Colors.white),),
     );
   }
 }

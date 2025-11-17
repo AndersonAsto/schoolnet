@@ -1,9 +1,11 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:schoolnet/screens/teacherScreens/overallCourseAverageScreen.dart';
 import 'package:schoolnet/utils/colors.dart';
 import 'package:schoolnet/utils/customDataSelection.dart';
 import 'package:schoolnet/screens/adminScreens/yearsScreen.dart';
+import 'package:schoolnet/utils/customTextFields.dart';
 
 class TeachingBlockAveragesScreen extends StatefulWidget {
   final int teacherId;
@@ -286,7 +288,7 @@ class _TeachingBlockAveragesScreenState extends State<TeachingBlockAveragesScree
 
       if (res.statusCode == 200) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("✅ Promedio guardado correctamente.")),
+          const SnackBar(content: Text("Promedio guardado correctamente.")),
         );
       } else {
         final error = jsonDecode(res.body);
@@ -396,14 +398,16 @@ class _TeachingBlockAveragesScreenState extends State<TeachingBlockAveragesScree
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          "Calificación de Bloque Lectivo - Docente ${widget.teacherId}",
+          "Promedios de Bloque Lectivo - Docente ${widget.teacherId}",
           style: const TextStyle(fontSize: 15, color: Colors.white),
         ),
         automaticallyImplyLeading: false,
         backgroundColor: appColors[3],
       ),
-      body: SingleChildScrollView(
-        child: Padding(
+      body: SelectableRegion(
+        focusNode: FocusNode(),
+        selectionControls: materialTextSelectionControls,
+        child: SingleChildScrollView(
           padding: const EdgeInsets.all(15),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -413,7 +417,7 @@ class _TeachingBlockAveragesScreenState extends State<TeachingBlockAveragesScree
                 children: [
                   Expanded(
                     child: SelectionField(
-                      hintText: "Seleccionar Año Escolar",
+                      labelText: "Seleccionar Año Escolar",
                       displayController: yearDisplayController,
                       idController: yearIdController,
                       token: token,
@@ -449,26 +453,27 @@ class _TeachingBlockAveragesScreenState extends State<TeachingBlockAveragesScree
                 padding: const EdgeInsets.symmetric(horizontal: 0),
                 child: loadingSchedules
                     ? const CircularProgressIndicator()
-                    : DropdownButtonFormField<String>(
-                  decoration: InputDecoration(
-                    labelText: "Grupo Docente",
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
+                    : CustomInputContainer(
+                    child: DropdownButtonFormField<String>(
+                      decoration: InputDecoration(
+                        labelText: "Grupo Docente",
+                        border: InputBorder.none,
+                        filled: true,
+                        fillColor: Colors.grey[100],
+                        prefixIcon: const Icon(Icons.groups),
+                      ),
+                      value: selectedScheduleId,
+                      items: schedules.map<DropdownMenuItem<String>>((item) {
+                        final course = item["courses"]?["course"] ?? "Sin curso";
+                        final grade = item["grades"]?["grade"] ?? "—";
+                        final section = item["sections"]?["seccion"] ?? "—";
+                        return DropdownMenuItem<String>(
+                          value: item["id"].toString(),
+                          child: Text("$course - $grade $section"),
+                        );
+                      }).toList(),
+                      onChanged: (val) => setState(() => selectedScheduleId = val),
                     ),
-                    filled: true,
-                    fillColor: Colors.grey[100],
-                  ),
-                  value: selectedScheduleId,
-                  items: schedules.map<DropdownMenuItem<String>>((item) {
-                    final course = item["courses"]?["course"] ?? "Sin curso";
-                    final grade = item["grades"]?["grade"] ?? "—";
-                    final section = item["sections"]?["seccion"] ?? "—";
-                    return DropdownMenuItem<String>(
-                      value: item["id"].toString(),
-                      child: Text("$course - $grade $section"),
-                    );
-                  }).toList(),
-                  onChanged: (val) => setState(() => selectedScheduleId = val),
                 ),
               ),
               const SizedBox(height: 15),
@@ -477,23 +482,24 @@ class _TeachingBlockAveragesScreenState extends State<TeachingBlockAveragesScree
                 padding: const EdgeInsets.symmetric(horizontal: 0),
                 child: loadingBlocks
                     ? const CircularProgressIndicator()
-                    : DropdownButtonFormField<String>(
-                  decoration: InputDecoration(
-                    labelText: "Bloque Lectivo",
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
+                    : CustomInputContainer(
+                    child: DropdownButtonFormField<String>(
+                      decoration: InputDecoration(
+                        labelText: "Bloque Lectivo",
+                        border: InputBorder.none,
+                        filled: true,
+                        fillColor: Colors.grey[100],
+                        prefixIcon: const Icon(Icons.schedule),
+                      ),
+                      value: selectedTeachingBlockId,
+                      items: teachingBlocks.map<DropdownMenuItem<String>>((item) {
+                        return DropdownMenuItem<String>(
+                          value: item["id"].toString(),
+                          child: Text(item["teachingBlock"] ?? "Bloque ${item["id"]}"),
+                        );
+                      }).toList(),
+                      onChanged: (val) => setState(() => selectedTeachingBlockId = val),
                     ),
-                    filled: true,
-                    fillColor: Colors.grey[100],
-                  ),
-                  value: selectedTeachingBlockId,
-                  items: teachingBlocks.map<DropdownMenuItem<String>>((item) {
-                    return DropdownMenuItem<String>(
-                      value: item["id"].toString(),
-                      child: Text(item["teachingBlock"] ?? "Bloque ${item["id"]}"),
-                    );
-                  }).toList(),
-                  onChanged: (val) => setState(() => selectedTeachingBlockId = val),
                 ),
               ),
               const SizedBox(height: 15),
@@ -519,29 +525,29 @@ class _TeachingBlockAveragesScreenState extends State<TeachingBlockAveragesScree
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Divider(),
                       // Seleccionar estudiante
-                      DropdownButtonFormField<String>(
-                        decoration: InputDecoration(
-                          labelText: "Seleccionar Estudiante",
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
+                      CustomInputContainer(
+                        child: DropdownButtonFormField<String>(
+                          decoration: InputDecoration(
+                            labelText: "Seleccionar Estudiante",
+                            border: InputBorder.none,
+                            filled: true,
+                            fillColor: Colors.grey[100],
+                            prefixIcon: const Icon(Icons.person_search_outlined),
                           ),
-                          filled: true,
-                          fillColor: Colors.grey[100],
+                          value: selectedStudentId,
+                          items: students.map<DropdownMenuItem<String>>((student) {
+                            final person = student["persons"];
+                            return DropdownMenuItem<String>(
+                              value: student["id"].toString(),
+                              child: Text("${person["names"]} ${person["lastNames"]}"),
+                            );
+                          }).toList(),
+                          onChanged: (val) {
+                            setState(() => selectedStudentId = val);
+                            _loadExamsByStudent();
+                          },
                         ),
-                        value: selectedStudentId,
-                        items: students.map<DropdownMenuItem<String>>((student) {
-                          final person = student["persons"];
-                          return DropdownMenuItem<String>(
-                            value: student["id"].toString(),
-                            child: Text("${person["names"]} ${person["lastNames"]}"),
-                          );
-                        }).toList(),
-                        onChanged: (val) {
-                          setState(() => selectedStudentId = val);
-                          _loadExamsByStudent();
-                        },
                       ),
                       const SizedBox(height: 15),
                       // Generar/actualizar promedio
@@ -560,7 +566,7 @@ class _TeachingBlockAveragesScreenState extends State<TeachingBlockAveragesScree
                           ),
                         ),
                       ),
-                      const Divider(),
+                      const SizedBox(height: 15),
                       // Ver calificación diaria
                       ElevatedButton.icon(
                         onPressed: () {
@@ -583,7 +589,7 @@ class _TeachingBlockAveragesScreenState extends State<TeachingBlockAveragesScree
                           ),
                         ),
                       ),
-                      const Divider(),
+                      const SizedBox(height: 15),
                       // Ver calificación de evaluciones
                       ElevatedButton.icon(
                         onPressed: () {
@@ -601,6 +607,51 @@ class _TeachingBlockAveragesScreenState extends State<TeachingBlockAveragesScree
                           backgroundColor: appColors[9],
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 15),
+                      // Ver promedios por bloques lectivos del curso
+                      ElevatedButton.icon(
+                        onPressed: () async {
+                          if (selectedStudentId == null || selectedScheduleId == null || yearIdController.text.isEmpty) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text("Debe seleccionar año, horario y estudiante.")),
+                            );
+                            return;
+                          }
+
+                          final url = Uri.parse(
+                              "http://localhost:3000/api/teachingblockaverage/byStudent/$selectedStudentId/year/${yearIdController.text}/assignment/$selectedScheduleId"
+                          );
+                          final res = await http.get(url, headers: {
+                            "Authorization": "Bearer ${token ?? widget.token}",
+                            "Content-Type": "application/json",
+                          });
+
+                          if (res.statusCode == 200) {
+                            final data = json.decode(res.body);
+                            showDialog(
+                              context: context,
+                              builder: (_) => StudentBlockAveragesDialog(
+                                blockAverages: List<Map<String, dynamic>>.from(data),
+                              ),
+                            );
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text("Error al obtener promedios: ${res.body}")),
+                            );
+                          }
+                        },
+                        icon: const Icon(Icons.bar_chart, color: Colors.white,),
+                        label: const Text("Ver Promedios por Bloques Lectivos del Curso"),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: appColors[9],
+                          foregroundColor: Colors.white,
+                          padding:
+                          const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(10),
                           ),
@@ -627,8 +678,25 @@ class TeachingBlockConfirmDialog extends StatelessWidget {
     required this.onConfirm,
   });
 
+  Color _getNoteColor(double? note) {
+    if (note == null) return Colors.black87;
+    return note >= 11 ? Colors.green[700]! : Colors.red[700]!;
+  }
+
+  Color _getNoteBackground(double? note) {
+    if (note == null) return Colors.transparent;
+    return note >= 11
+        ? Colors.green.withOpacity(0.08)
+        : Colors.red.withOpacity(0.08);
+  }
+
   @override
   Widget build(BuildContext context) {
+    final daily = double.tryParse(record["dailyAvarage"]?.toString() ?? "");
+    final practices = double.tryParse(record["practiceAvarage"]?.toString() ?? "");
+    final exams = double.tryParse(record["examAvarage"]?.toString() ?? "");
+    final total = double.tryParse(record["teachingBlockAvarage"]?.toString() ?? "");
+
     return AlertDialog(
       title: Column(
         mainAxisAlignment: MainAxisAlignment.start,
@@ -663,21 +731,49 @@ class TeachingBlockConfirmDialog extends StatelessWidget {
           rows: [
             DataRow(cells: [
               const DataCell(Text("Promedio diario")),
-              DataCell(Text(record["dailyAvarage"]?.toString() ?? "—")),
+              DataCell(Container(
+                color: _getNoteBackground(daily),
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                child: Text(
+                  daily != null ? daily.toStringAsFixed(2) : "—",
+                  style: TextStyle(color: _getNoteColor(daily)),
+                ),
+              )),
             ]),
             DataRow(cells: [
               const DataCell(Text("Promedio de prácticas")),
-              DataCell(Text(record["practiceAvarage"]?.toString() ?? "—")),
+              DataCell(Container(
+                color: _getNoteBackground(practices),
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                child: Text(
+                  practices != null ? practices.toStringAsFixed(2) : "—",
+                  style: TextStyle(color: _getNoteColor(practices)),
+                ),
+              )),
             ]),
             DataRow(cells: [
               const DataCell(Text("Promedio de exámenes")),
-              DataCell(Text(record["examAvarage"]?.toString() ?? "—")),
+              DataCell(Container(
+                color: _getNoteBackground(exams),
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                child: Text(
+                  exams != null ? exams.toStringAsFixed(2) : "—",
+                  style: TextStyle(color: _getNoteColor(exams)),
+                ),
+              )),
             ]),
             DataRow(cells: [
               const DataCell(Text("Promedio final de bloque")),
-              DataCell(Text(
-                record["teachingBlockAvarage"]?.toString() ?? "—",
-                style: const TextStyle(fontWeight: FontWeight.bold),
+              DataCell(Container(
+                color: _getNoteBackground(total),
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                child: Text(
+                  total != null ? total.toStringAsFixed(2) : "—",
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: _getNoteColor(total),
+                  ),
+                ),
               )),
             ]),
           ],
@@ -713,6 +809,18 @@ class StudentDailyRecordsDialog extends StatelessWidget {
   final List<Map<String, dynamic>> records;
 
   const StudentDailyRecordsDialog({super.key, required this.records});
+
+  Color _getNoteColor(double? note) {
+    if (note == null) return Colors.black87;
+    return note >= 11 ? Colors.green[700]! : Colors.red[700]!;
+  }
+
+  Color _getNoteBackground(double? note) {
+    if (note == null) return Colors.transparent;
+    return note >= 11
+        ? Colors.green.withOpacity(0.08)
+        : Colors.red.withOpacity(0.08);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -751,12 +859,27 @@ class StudentDailyRecordsDialog extends StatelessWidget {
               DataColumn(label: Text("Calificación")),
             ],
             rows: records.map((r) {
-              final asistencia = r["asistencia"];
-              final calificacion = r["calificacion"];
+              final asistencia = r["asistencia"] ?? "—";
+              final calificacionStr = r["calificacion"]?.toString();
+              final calificacion = double.tryParse(calificacionStr ?? "");
+
               return DataRow(cells: [
                 DataCell(Text(r["fecha"] ?? "—")),
                 DataCell(Text(asistencia)),
-                DataCell(Text(calificacion)),
+                DataCell(Container(
+                  color: _getNoteBackground(calificacion),
+                  padding:
+                  const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  child: Text(
+                    calificacion != null
+                        ? calificacion.toStringAsFixed(2)
+                        : "—",
+                    style: TextStyle(
+                      color: _getNoteColor(calificacion),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                )),
               ]);
             }).toList(),
           ),
@@ -776,6 +899,18 @@ class StudentExamsDialog extends StatelessWidget {
   final List<Map<String, dynamic>> exams;
 
   const StudentExamsDialog({super.key, required this.exams});
+
+  Color _getNoteColor(double? note) {
+    if (note == null) return Colors.black87;
+    return note >= 11 ? Colors.green[700]! : Colors.red[700]!;
+  }
+
+  Color _getNoteBackground(double? note) {
+    if (note == null) return Colors.transparent;
+    return note >= 11
+        ? Colors.green.withOpacity(0.08)
+        : Colors.red.withOpacity(0.08);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -818,12 +953,19 @@ class StudentExamsDialog extends StatelessWidget {
               final block = exam["teachingblocks"]?["teachingBlock"] ?? "—";
               final type = exam["type"] ?? "—";
               final date = exam["createdAt"]?.toString().split("T").first ?? "—";
-              final score = exam["score"]?.toString() ?? "—";
+              final score = double.tryParse(exam["score"]?.toString() ?? "");
               return DataRow(cells: [
                 DataCell(Text(block)),
                 DataCell(Text(type)),
                 DataCell(Text(date)),
-                DataCell(Text(score)),
+                DataCell(Container(
+                  color: _getNoteBackground(score),
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  child: Text(
+                    score != null ? score.toStringAsFixed(2) : "—",
+                    style: TextStyle(color: _getNoteColor(score), fontWeight: FontWeight.bold),
+                  ),
+                )),
               ]);
             }).toList(),
           ),
