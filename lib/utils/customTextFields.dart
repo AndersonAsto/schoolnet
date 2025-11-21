@@ -7,10 +7,10 @@ class CommonInfoFields extends StatelessWidget {
   final TextEditingController statusController;
 
   const CommonInfoFields({
-    Key? key,
+    super.key,
     required this.idController,
     required this.statusController,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -22,10 +22,11 @@ class CommonInfoFields extends StatelessWidget {
             child: TextField(
               controller: idController,
               enabled: false,
-              style: TextStyle(fontSize: 13),
+              style: const TextStyle(fontSize: 12),
               decoration: InputDecoration(
                 labelText: "Código",
-                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+                labelStyle: const TextStyle(fontSize: 11, color: Colors.black),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -46,10 +47,11 @@ class CommonInfoFields extends StatelessWidget {
             child: TextField(
               controller: statusController,
               enabled: false,
-              style: TextStyle(fontSize: 13),
+              style: const TextStyle(fontSize: 12),
               decoration: InputDecoration(
                 labelText: "Estado",
-                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+                labelStyle: const TextStyle(fontSize: 11, color: Colors.black),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -73,10 +75,10 @@ class CommonTimestampsFields extends StatelessWidget {
   final TextEditingController updatedAtController;
 
   const CommonTimestampsFields({
-    Key? key,
+    super.key,
     required this.createdAtController,
     required this.updatedAtController,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context){
@@ -88,7 +90,8 @@ class CommonTimestampsFields extends StatelessWidget {
             child: TextField(
               decoration: InputDecoration(
                 labelText: "Creado el...",
-                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+                labelStyle: const TextStyle(fontSize: 11, color: Colors.black),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -100,7 +103,7 @@ class CommonTimestampsFields extends StatelessWidget {
                 ),
               ),
               controller: createdAtController,
-              style: TextStyle(fontSize: 13),
+              style: const TextStyle(fontSize: 12),
               enabled: false,
             ),
           ),
@@ -112,7 +115,8 @@ class CommonTimestampsFields extends StatelessWidget {
             child: TextField(
               decoration: InputDecoration(
                 labelText: "Actualizado el...",
-                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+                labelStyle: const TextStyle(fontSize: 11, color: Colors.black),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -124,7 +128,7 @@ class CommonTimestampsFields extends StatelessWidget {
                 ),
               ),
               controller: updatedAtController,
-              style: TextStyle(fontSize: 13),
+              style: const TextStyle(fontSize: 12),
               enabled: false,
             ),
           ),
@@ -144,7 +148,7 @@ class CustomTextField extends StatelessWidget {
   final VoidCallback? onTap;
 
   const CustomTextField({
-    Key? key,
+    super.key,
     required this.label,
     required this.controller,
     this.enabled = true,
@@ -152,7 +156,7 @@ class CustomTextField extends StatelessWidget {
     this.inputFormatters,
     this.readOnly = false,
     this.onTap
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -166,13 +170,14 @@ class CustomTextField extends StatelessWidget {
               filled: true,
               fillColor: Colors.grey[100],
               labelText: label,
+              labelStyle: const TextStyle(fontSize: 11, color: Colors.black),
               contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: const BorderSide(width: 1, color: Colors.black,),
               ),
             ),
-            style: const TextStyle(fontSize: 13),
+            style: const TextStyle(fontSize: 12),
             controller: controller,
             enabled: enabled,
             keyboardType: keyboardType,

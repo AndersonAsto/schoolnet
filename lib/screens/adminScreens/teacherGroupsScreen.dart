@@ -284,143 +284,147 @@ class _TeacherGroupsScreenState extends State<TeacherGroupsScreen> {
         automaticallyImplyLeading: false,
         backgroundColor: appColors[3],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(15),
-        child: Column(
-          children: [
-            Card(
-              child: ExpansionTile(
-                title: const Text('Registrar/Actualizar Grupo de Docente'),
-                subtitle: const Text('Toca para abrir el formulario'),
-                leading: const Icon(Icons.add_box),
-                childrenPadding: const EdgeInsets.all(15),
-                children: [
-                  CommonInfoFields(idController: idController, statusController: statusController),
-                  const SizedBox(height: 10),
-                  Column(
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: SelectionField(
-                              labelText: "Seleccionar Docente",
-                              displayController: teacherDisplayController,
-                              idController: teacherIdController,
-                              onTap: () async => await showTeacherSelection(context, teacherIdController, teacherDisplayController),
+      body: SelectableRegion(
+        focusNode: FocusNode(),
+        selectionControls: materialTextSelectionControls,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(15),
+          child: Column(
+            children: [
+              Card(
+                child: ExpansionTile(
+                  title: const Text('Registrar/Actualizar Grupo de Docente'),
+                  subtitle: const Text('Toca para abrir el formulario'),
+                  leading: const Icon(Icons.add_box),
+                  childrenPadding: const EdgeInsets.all(15),
+                  children: [
+                    CommonInfoFields(idController: idController, statusController: statusController),
+                    const SizedBox(height: 10),
+                    Column(
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: SelectionField(
+                                labelText: "Seleccionar Docente",
+                                displayController: teacherDisplayController,
+                                idController: teacherIdController,
+                                onTap: () async => await showTeacherSelection(context, teacherIdController, teacherDisplayController),
+                              ),
                             ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 10),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: SelectionField(
-                              labelText: "Seleccionar Año",
-                              displayController: yearDisplayController,
-                              idController: yearIdController,
-                              token: token,
-                              onTap: () async => await showYearsSelection(context, yearIdController, yearDisplayController, token: token),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: SelectionField(
+                                labelText: "Seleccionar Año",
+                                displayController: yearDisplayController,
+                                idController: yearIdController,
+                                token: token,
+                                onTap: () async => await showYearsSelection(context, yearIdController, yearDisplayController, token: token),
+                              ),
                             ),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: SelectionField(
-                              labelText: "Seleccionar Curso",
-                              displayController: courseDisplayController,
-                              idController: courseIdController,
-                              onTap: () async => await showCourseSelection(context, courseIdController, courseDisplayController),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: SelectionField(
+                                labelText: "Seleccionar Curso",
+                                displayController: courseDisplayController,
+                                idController: courseIdController,
+                                onTap: () async => await showCourseSelection(context, courseIdController, courseDisplayController),
+                              ),
                             ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 10),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: SelectionField(
-                              labelText: "Seleccionar Grado",
-                              displayController: gradeDisplayController,
-                              idController: gradeIdController,
-                              onTap: () async => await showGradeSelection(context, gradeIdController, gradeDisplayController),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: SelectionField(
+                                labelText: "Seleccionar Grado",
+                                displayController: gradeDisplayController,
+                                idController: gradeIdController,
+                                onTap: () async => await showGradeSelection(context, gradeIdController, gradeDisplayController),
+                              ),
                             ),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: SelectionField(
-                              labelText: "Seleccionar Sección",
-                              displayController: sectionDisplayController,
-                              idController: sectionIdController,
-                              onTap: () async => await showSectionsSelection(context, sectionIdController, sectionDisplayController),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: SelectionField(
+                                labelText: "Seleccionar Sección",
+                                displayController: sectionDisplayController,
+                                idController: sectionIdController,
+                                onTap: () async => await showSectionsSelection(context, sectionIdController, sectionDisplayController),
+                              ),
                             ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  CommonTimestampsFields(createdAtController: createdAtController, updatedAtController: updatedAtController),
-                  const SizedBox(height: 10),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      IconButton(onPressed: saveTeacherGroup, icon: Icon(Icons.save, color: appColors[3]), tooltip: 'Guardar'),
-                      IconButton(onPressed: cancelUpdate, icon: const Icon(Icons.clear_all, color: Colors.deepOrange), tooltip: 'Cancelar Actualización'),
-                      IconButton(onPressed: updateTeacherGroup, icon: Icon(Icons.update, color: appColors[8]), tooltip: 'Actualizar'),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            // Sección de la tabla de datos
-            const SizedBox(height: 15),
-            const CustomTitleWidget(
-              child: Text('Grupos de Docentes Registrados', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white)),
-            ),
-            const SizedBox(height: 15),
-            CustomInputContainer(
-              child: TextField(
-                controller: searchController,
-                decoration: const InputDecoration(
-                  labelText: 'Buscar',
-                  prefixIcon: Icon(Icons.search, color: Colors.teal),
-                  border: InputBorder.none,
-                ),
-                onChanged: (value) {
-                  filterTeacherGroups(value);
-                },
-              ),
-            ),
-            const SizedBox(height: 15),
-            SingleChildScrollView(
-              child: ConstrainedBox(
-                constraints: BoxConstraints(minWidth: MediaQuery.of(context).size.width),
-                child: PaginatedDataTable(
-                  columns: const [
-                    DataColumn(label: Text('ID')),
-                    DataColumn(label: Text('Año')),
-                    DataColumn(label: Text('Docente')),
-                    DataColumn(label: Text('Curso')),
-                    DataColumn(label: Text('Grado')),
-                    DataColumn(label: Text('Sección')),
-                    //DataColumn(label: Text('Estado')),
-                    DataColumn(label: Text('Acciones'))
+                          ],
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    CommonTimestampsFields(createdAtController: createdAtController, updatedAtController: updatedAtController),
+                    const SizedBox(height: 10),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        IconButton(onPressed: saveTeacherGroup, icon: Icon(Icons.save, color: appColors[3]), tooltip: 'Guardar'),
+                        IconButton(onPressed: cancelUpdate, icon: const Icon(Icons.clear_all, color: Colors.deepOrange), tooltip: 'Cancelar Actualización'),
+                        IconButton(onPressed: updateTeacherGroup, icon: Icon(Icons.update, color: appColors[8]), tooltip: 'Actualizar'),
+                      ],
+                    ),
                   ],
-                  source: _teacherGroupsDataSource,
-                  rowsPerPage: 10,
-                  onPageChanged: (int page) {
-                    if (kDebugMode) {
-                      print('Página cambiada a: $page');
-                    }
-                  },
-                  availableRowsPerPage: const [5, 10, 15, 20, 50],
-                  showCheckboxColumn: false,
                 ),
               ),
-            )
-          ],
+              // Sección de la tabla de datos
+              const SizedBox(height: 15),
+              const CustomTitleWidget(
+                child: Text('Grupos de Docentes Registrados', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white)),
+              ),
+              const SizedBox(height: 15),
+              CustomInputContainer(
+                child: TextField(
+                  controller: searchController,
+                  decoration: const InputDecoration(
+                    labelText: 'Buscar',
+                    prefixIcon: Icon(Icons.search, color: Colors.teal),
+                    border: InputBorder.none,
+                  ),
+                  onChanged: (value) {
+                    filterTeacherGroups(value);
+                  },
+                ),
+              ),
+              const SizedBox(height: 15),
+              SingleChildScrollView(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minWidth: MediaQuery.of(context).size.width),
+                  child: PaginatedDataTable(
+                    columns: const [
+                      DataColumn(label: Text('ID')),
+                      DataColumn(label: Text('Año')),
+                      DataColumn(label: Text('Docente')),
+                      DataColumn(label: Text('Curso')),
+                      DataColumn(label: Text('Grado')),
+                      DataColumn(label: Text('Sección')),
+                      //DataColumn(label: Text('Estado')),
+                      DataColumn(label: Text('Acciones'))
+                    ],
+                    source: _teacherGroupsDataSource,
+                    rowsPerPage: 10,
+                    onPageChanged: (int page) {
+                      if (kDebugMode) {
+                        print('Página cambiada a: $page');
+                      }
+                    },
+                    availableRowsPerPage: const [5, 10, 15, 20, 50],
+                    showCheckboxColumn: false,
+                  ),
+                ),
+              )
+            ],
+          ),
         ),
-      ),
+      )
     );
   }
 }

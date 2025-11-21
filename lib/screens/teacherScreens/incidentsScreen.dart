@@ -228,10 +228,7 @@ class _IncidentsScreenState extends State<IncidentsScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          "Incidencias - Docente ${widget.teacherId}",
-          style: const TextStyle(fontSize: 15, color: Colors.white),
-        ),
+        title: Text("Incidencias - Docente ${widget.teacherId}", style: const TextStyle(fontSize: 15, color: Colors.white),),
         backgroundColor: appColors[3],
       ),
       body: SelectableRegion(
@@ -427,7 +424,8 @@ class _IncidentsScreenState extends State<IncidentsScreen> {
                     ],
                   ),
                 ),
-              if (schoolDays.isNotEmpty)
+              if (schoolDays.isNotEmpty)...[
+                const SizedBox(width: 15),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 0),
                   child: Column(
@@ -505,6 +503,7 @@ class _IncidentsScreenState extends State<IncidentsScreen> {
                     ],
                   ),
                 ),
+              ],
               const SizedBox(height: 15),
               if (selectedStudentId != null)
                 if (selectedStudentId != null)
@@ -535,7 +534,6 @@ class IncidentsTable extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dataSource = _IncidentsDataSource(incidents: incidents);
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [

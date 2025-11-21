@@ -31,7 +31,7 @@ class _TeachingBlockAveragesScreenState extends State<TeachingBlockAveragesScree
   String? selectedExamType;
   String? selectedStudentId;
   String? token;
-  String? selectedScheduleId;
+  String? assignmentId;
   String? selectedSchoolDayId;
   String? selectedTeachingBlockId;
 
@@ -77,7 +77,7 @@ class _TeachingBlockAveragesScreenState extends State<TeachingBlockAveragesScree
       loadingTeachingBlocks = true;
       schedules = [];
       teachingBlocks = [];
-      selectedScheduleId = null;
+      assignmentId = null;
       selectedTeachingBlockId = null;
     });
 
@@ -139,7 +139,7 @@ class _TeachingBlockAveragesScreenState extends State<TeachingBlockAveragesScree
   }
 
   Future<void> _loadStudentsBySchedule() async {
-    if (selectedScheduleId == null) {
+    if (assignmentId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Seleccione primero un horario.")),
       );
@@ -151,7 +151,7 @@ class _TeachingBlockAveragesScreenState extends State<TeachingBlockAveragesScree
       students = [];
     });
 
-    final url = Uri.parse("http://localhost:3000/api/studentEnrollments/by-group/$selectedScheduleId");
+    final url = Uri.parse("http://localhost:3000/api/studentEnrollments/by-group/$assignmentId");
 
     final res = await http.get(
       url,
@@ -186,7 +186,7 @@ class _TeachingBlockAveragesScreenState extends State<TeachingBlockAveragesScree
       studentExams = [];
     });
 
-    final url = Uri.parse("http://localhost:3000/api/exams/student/$selectedStudentId/group/$selectedScheduleId");
+    final url = Uri.parse("http://localhost:3000/api/exams/student/$selectedStudentId/group/$assignmentId");
 
     try {
       final res = await http.get(
@@ -219,7 +219,7 @@ class _TeachingBlockAveragesScreenState extends State<TeachingBlockAveragesScree
   }
 
   Future<void> _generateTeachingBlockAverage() async {
-    if (selectedStudentId == null || selectedScheduleId == null || selectedTeachingBlockId == null) {
+    if (selectedStudentId == null || assignmentId == null || selectedTeachingBlockId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Seleccione estudiante, horario y bloque lectivo.")),
       );
@@ -237,7 +237,7 @@ class _TeachingBlockAveragesScreenState extends State<TeachingBlockAveragesScree
         },
         body: jsonEncode({
           "studentId": int.parse(selectedStudentId!),
-          "assignmentId": int.parse(selectedScheduleId!),
+          "assignmentId": int.parse(assignmentId!),
           "teachingBlockId": int.parse(selectedTeachingBlockId!),
         }),
       );
@@ -281,7 +281,7 @@ class _TeachingBlockAveragesScreenState extends State<TeachingBlockAveragesScree
         },
         body: jsonEncode({
           "studentId": int.parse(selectedStudentId!),
-          "assignmentId": int.parse(selectedScheduleId!),
+          "assignmentId": int.parse(assignmentId!),
           "teachingBlockId": int.parse(selectedTeachingBlockId!),
         }),
       );
@@ -304,7 +304,7 @@ class _TeachingBlockAveragesScreenState extends State<TeachingBlockAveragesScree
   }
 
   Future<void> _showStudentDailyRecordsModal() async {
-    if (selectedStudentId == null || selectedScheduleId == null) {
+    if (selectedStudentId == null || assignmentId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Seleccione un estudiante y un horario.")),
       );
@@ -319,7 +319,7 @@ class _TeachingBlockAveragesScreenState extends State<TeachingBlockAveragesScree
       final responses = await Future.wait([
         http.get(
           Uri.parse(
-              "http://localhost:3000/api/qualifications/by-group/$selectedScheduleId/student/$selectedStudentId"),
+              "http://localhost:3000/api/qualifications/by-group/$assignmentId/student/$selectedStudentId"),
           headers: {
             "Authorization": "Bearer ${token ?? widget.token}",
             "Content-Type": "application/json",
@@ -327,7 +327,7 @@ class _TeachingBlockAveragesScreenState extends State<TeachingBlockAveragesScree
         ),
         http.get(
           Uri.parse(
-              "http://localhost:3000/api/assistances/by-group/$selectedScheduleId/student/$selectedStudentId"),
+              "http://localhost:3000/api/assistances/by-group/$assignmentId/student/$selectedStudentId"),
           headers: {
             "Authorization": "Bearer ${token ?? widget.token}",
             "Content-Type": "application/json",
@@ -397,10 +397,7 @@ class _TeachingBlockAveragesScreenState extends State<TeachingBlockAveragesScree
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          "Promedios de Bloque Lectivo - Docente ${widget.teacherId}",
-          style: const TextStyle(fontSize: 15, color: Colors.white),
-        ),
+        title: Text("Promedios de Bloque Lectivo - Docente ${widget.teacherId}", style: const TextStyle(fontSize: 15, color: Colors.white),),
         automaticallyImplyLeading: false,
         backgroundColor: appColors[3],
       ),
@@ -462,7 +459,7 @@ class _TeachingBlockAveragesScreenState extends State<TeachingBlockAveragesScree
                         fillColor: Colors.grey[100],
                         prefixIcon: const Icon(Icons.groups),
                       ),
-                      value: selectedScheduleId,
+                      value: assignmentId,
                       items: schedules.map<DropdownMenuItem<String>>((item) {
                         final course = item["courses"]?["course"] ?? "Sin curso";
                         final grade = item["grades"]?["grade"] ?? "—";
@@ -472,7 +469,7 @@ class _TeachingBlockAveragesScreenState extends State<TeachingBlockAveragesScree
                           child: Text("$course - $grade $section"),
                         );
                       }).toList(),
-                      onChanged: (val) => setState(() => selectedScheduleId = val),
+                      onChanged: (val) => setState(() => assignmentId = val),
                     ),
                 ),
               ),
@@ -570,7 +567,7 @@ class _TeachingBlockAveragesScreenState extends State<TeachingBlockAveragesScree
                       // Ver calificación diaria
                       ElevatedButton.icon(
                         onPressed: () {
-                          if (selectedScheduleId != null && selectedStudentId != null) {
+                          if (assignmentId != null && selectedStudentId != null) {
                             _showStudentDailyRecordsModal();
                           } else {
                             ScaffoldMessenger.of(context).showSnackBar(
@@ -616,7 +613,7 @@ class _TeachingBlockAveragesScreenState extends State<TeachingBlockAveragesScree
                       // Ver promedios por bloques lectivos del curso
                       ElevatedButton.icon(
                         onPressed: () async {
-                          if (selectedStudentId == null || selectedScheduleId == null || yearIdController.text.isEmpty) {
+                          if (selectedStudentId == null || assignmentId == null || yearIdController.text.isEmpty) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(content: Text("Debe seleccionar año, horario y estudiante.")),
                             );
@@ -624,7 +621,7 @@ class _TeachingBlockAveragesScreenState extends State<TeachingBlockAveragesScree
                           }
 
                           final url = Uri.parse(
-                              "http://localhost:3000/api/teachingblockaverage/byStudent/$selectedStudentId/year/${yearIdController.text}/assignment/$selectedScheduleId"
+                              "http://localhost:3000/api/teachingblockaverage/byStudent/$selectedStudentId/year/${yearIdController.text}/assignment/$assignmentId"
                           );
                           final res = await http.get(url, headers: {
                             "Authorization": "Bearer ${token ?? widget.token}",
@@ -922,10 +919,7 @@ class StudentExamsDialog extends StatelessWidget {
             children: [
               Icon(Icons.checklist, color: appColors[3]),
               const SizedBox(width: 8),
-              const Text(
-                "Evaluciones del Estudiante",
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-              ),
+              const Text("Evaluciones del Estudiante", style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),),
             ],
           ),
           const Divider(),

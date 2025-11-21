@@ -201,11 +201,12 @@ class SelectionField extends StatelessWidget {
         onTap: onTap,
         child: AbsorbPointer(
           child: TextField(
-            style: const TextStyle(fontSize: 13),
+            style: const TextStyle(fontSize: 12),
             decoration: InputDecoration(
               filled: true,
               fillColor: Colors.grey[100],
               labelText: labelText,
+              labelStyle: const TextStyle(fontSize: 11, color: Colors.black),
               contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),

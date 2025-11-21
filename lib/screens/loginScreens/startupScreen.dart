@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:schoolnet/navigation/adminNavigation.dart';
+import 'package:schoolnet/navigation/parentNavigation.dart';
 import 'package:schoolnet/navigation/teacherNavigation.dart';
 import 'package:schoolnet/screens/loginScreens/loginScreen.dart';
 
@@ -27,7 +28,7 @@ class _StartupScreenState extends State<StartupScreen> {
 
     if (token != null) {
       try {
-        // 🔹 Consultamos al backend quién es el usuario
+        // Consulta sobre el usuario
         final res = await http.get(
           Uri.parse("http://localhost:3000/api/auth/profile"),
           headers: {
@@ -43,7 +44,12 @@ class _StartupScreenState extends State<StartupScreen> {
             nextPage = const AdminNavigationRail();
           } else if (data["role"] == "Docente") {
             nextPage = TeacherNavigationRail(
-              teacher: data["user"], // aquí asegúrate que tu API devuelva user
+              teacher: data["user"],
+              token: token,
+            );
+          } else if (data["role"] == "Apoderado"){
+            nextPage = ParentsNavigationRail(
+              parent: data["user"],
               token: token,
             );
           } else {

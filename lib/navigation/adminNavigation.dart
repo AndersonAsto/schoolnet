@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:schoolnet/screens/adminScreens/academicPerformanceScreen.dart';
 import 'package:schoolnet/screens/adminScreens/coursesScreen.dart';
 import 'package:schoolnet/screens/adminScreens/gradesScreen.dart';
 import 'package:schoolnet/screens/adminScreens/holidaysScreen.dart';
 import 'package:schoolnet/screens/adminScreens/parentAssignmentsScreen.dart';
 import 'package:schoolnet/screens/adminScreens/personsScreen.dart';
 import 'package:schoolnet/screens/adminScreens/schedulesScreen.dart';
+import 'package:schoolnet/screens/adminScreens/schoolDaysByScheduleScreen.dart';
 import 'package:schoolnet/screens/adminScreens/studentEnrollmentsScreen.dart';
 import 'package:schoolnet/screens/adminScreens/teacherAssignmentsScreen.dart';
 import 'package:schoolnet/screens/adminScreens/teacherGroupsScreen.dart';
@@ -46,7 +48,9 @@ class _AdminNavigationRailState extends State<AdminNavigationRail> {
     StudentEnrollmentsScreen(),
     ParentAssignmentsScreen(),
     SchedulesScreen(),
+    SchoolDaysByScheduleScreen(),
     TutorsScreen(),
+    AcademicPerformanceScreen()
   ];
 
   @override
@@ -122,10 +126,7 @@ class _AdminNavigationRailState extends State<AdminNavigationRail> {
                       ? const Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Flexible(child: Text(
-                        'Bienvenido/a',
-                        style: TextStyle(color: Colors.white, fontSize: 15),
-                      ),),
+                      Flexible(child: Text('Bienvenido/a', style: TextStyle(color: Colors.white, fontSize: 15),),),
                     ],
                   )
                       : const Icon(Icons.person, color: Colors.white, size: 32),
@@ -147,7 +148,9 @@ class _AdminNavigationRailState extends State<AdminNavigationRail> {
               SidebarXItem(icon: Icons.border_color_outlined, label: 'Estudiantes+'),
               SidebarXItem(icon: Icons.family_restroom, label: 'Apoderados+'),
               SidebarXItem(icon: Icons.schedule, label: 'Horarios'),
-              SidebarXItem(icon: Icons.personal_injury_rounded, label: 'Tutores')
+              SidebarXItem(icon: Icons.schema, label: 'Días/Horarios'),
+              SidebarXItem(icon: Icons.personal_injury_rounded, label: 'Tutores'),
+              SidebarXItem(icon: Icons.check_box_outlined, label: 'Rendimiento'),
             ],
           ),
           Expanded(

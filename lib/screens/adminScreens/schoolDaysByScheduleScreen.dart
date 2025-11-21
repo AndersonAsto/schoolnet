@@ -7,17 +7,18 @@ import 'package:schoolnet/utils/colors.dart';
 import 'package:schoolnet/utils/customDataSelection.dart';
 import 'package:schoolnet/utils/customTextFields.dart';
 
-class SchoolDaysBySchedules extends StatefulWidget {
-  const SchoolDaysBySchedules({super.key});
+class SchoolDaysByScheduleScreen extends StatefulWidget {
+  const SchoolDaysByScheduleScreen({super.key});
 
   @override
-  State<SchoolDaysBySchedules> createState() => _SchoolDaysBySchedulesState();
+  State<SchoolDaysByScheduleScreen> createState() => _SchoolDaysByScheduleScreenState();
 }
 
-class _SchoolDaysBySchedulesState extends State<SchoolDaysBySchedules> {
+class _SchoolDaysByScheduleScreenState extends State<SchoolDaysByScheduleScreen> {
   String? token;
   int? selectedYearId;
   List<dynamic> years = [];
+  List<dynamic> schedulesByYear = [];
   Map<int, List<dynamic>> schoolDaysPerYear = {};
   TextEditingController teacherIdController = TextEditingController();
   TextEditingController teacherDisplayController = TextEditingController();
@@ -61,60 +62,165 @@ class _SchoolDaysBySchedulesState extends State<SchoolDaysBySchedules> {
     }
   }
 
-  Future<void> generateSchoolDays() async {
-    if (selectedYearId == null) return;
-
-    final bloquesRes = await http.get(Uri.parse('${generalUrl}api/teachingBlocks/byYear/$selectedYearId'));
-    final feriadosRes = await http.get(Uri.parse('${generalUrl}api/holidays/byYear/$selectedYearId'));
-
-    if (bloquesRes.statusCode == 200 && feriadosRes.statusCode == 200) {
-      final bloques = jsonDecode(bloquesRes.body);
-      final feriados = (jsonDecode(feriadosRes.body) as List).map((f) => f['holiday']).toSet();
-
-      final fechasLectivas = <String>{};
-
-      for (var bloque in bloques) {
-        final inicio = DateTime.parse(bloque['startDay']);
-        final fin = DateTime.parse(bloque['endDay']);
-
-        for (var d = inicio; !d.isAfter(fin); d = d.add(Duration(days: 1))) {
-          if (d.weekday != DateTime.saturday && d.weekday != DateTime.sunday) {
-            final formato = d.toIso8601String().split('T')[0];
-            if (!feriados.contains(formato)) {
-              fechasLectivas.add(formato);
-            }
-          }
-        }
-      }
-
-      final response = await http.post(
-        Uri.parse('${generalUrl}api/schoolDays/bulkCreate'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'yearId': selectedYearId,
-          'teachingDay': fechasLectivas.toList()
-        }),
+  Future<void> generateTeacherScheduleDaysFn() async {
+    if (selectedYearId == null || teacherIdController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Seleccione un año y un docente.")),
       );
+      return;
+    }
 
-      if (response.statusCode == 409) {
-        ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text("Ya existen días lectivos para este año."))
-        );
-        return;
-      }
+    final response = await http.post(
+      Uri.parse('${generalUrl}api/scheduleSDs/create-by-techer'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'yearId': selectedYearId,
+        'teacherId': int.parse(teacherIdController.text),
+      }),
+    );
 
-      if (response.statusCode == 201) {
-        ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text("Días lectivos generados correctamente.")));
-        await fetchSchoolDaysByYear(selectedYearId!); // Actualizar la vista
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text("Error al generar días.")));
-      }
+    if (response.statusCode == 201) {
+      final data = jsonDecode(response.body);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(data['message'] ?? "Días lectivos generados correctamente.")),
+      );
+      // Opcional: recargar horarios o detalle según lo que muestres
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error al generar días: ${response.body}")),
+      );
     }
   }
+
+  Future<void> fetchSchedulesByYear(int yearId) async {
+    final response = await http.get(
+      Uri.parse('${generalUrl}api/schedules/by-year/$yearId'),
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      setState(() {
+        schedulesByYear = data; // cada item tiene years, schedules, etc según tu backend
+      });
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error al cargar horarios: ${response.body}")),
+      );
+    }
+  }
+
+  Future<void> showScheduleDaysModal(BuildContext context, int scheduleId) async {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return FutureBuilder<http.Response>(
+          future: http.get(Uri.parse('${generalUrl}api/scheduleSDs/by-schedule/$scheduleId')),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const AlertDialog(
+                content: SizedBox(
+                  height: 80,
+                  child: Center(child: CircularProgressIndicator()),
+                ),
+              );
+            }
+
+            if (snapshot.hasError || !snapshot.hasData) {
+              return AlertDialog(
+                title: const Text("Error"),
+                content: const Text("Ocurrió un error al cargar los días lectivos."),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text("Cerrar"),
+                  )
+                ],
+              );
+            }
+
+            final response = snapshot.data!;
+            if (response.statusCode != 200) {
+              return AlertDialog(
+                title: const Text("Sin datos"),
+                content: Text("No se encontraron días asociados a este horario.\n\n${response.body}"),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text("Cerrar"),
+                  )
+                ],
+              );
+            }
+
+            final List<dynamic> days = jsonDecode(response.body);
+
+            return AlertDialog(
+              title: Column(
+                mainAxisAlignment: MainAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.checklist, color: appColors[3]),
+                      const SizedBox(width: 8),
+                      const Text("Días Lectivos del Horario", style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),),
+                    ],
+                  ),
+                  const Divider(),
+                ],
+              ),
+              content: SizedBox(
+                width: 500,
+                height: 400,
+                child: days.isEmpty
+                    ? const Center(child: Text("No hay días lectivos generados para este horario."))
+                    : ListView.builder(
+                  itemCount: days.length,
+                  itemBuilder: (context, index) {
+                    final day = days[index];
+                    final schoolDay = day['schoolDays'];
+                    final teachingBlock = day['teachingBlocks'];
+                    final years = day['years'];
+                    final schedule = day['schedules'];
+
+                    return Card(
+                      margin: const EdgeInsets.symmetric(vertical: 4),
+                      child: ListTile(
+                        title: Text(
+                          "Fecha: ${schoolDay['teachingDay']} (${schoolDay['weekday']})",
+                          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                        ),
+                        subtitle: Text(
+                          "Año: ${years['year']} | Bloque: ${teachingBlock['teachingBlock']}\n"
+                              "Horario: ${schedule['startTime']} - ${schedule['endTime']}",
+                          style: const TextStyle(fontSize: 11),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text("Cerrar"),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    // Inicializa el source con los datos y la función del modal
+    final scheduleDataSource = ScheduleDataSource(
+      schedulesByYear,
+      context,
+      showScheduleDaysModal, // La función que ya tenías
+    );
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Días Lectivos por Horario', style: TextStyle(fontSize: 15, color: Colors.white),),
@@ -128,6 +234,7 @@ class _SchoolDaysBySchedulesState extends State<SchoolDaysBySchedules> {
           padding: const EdgeInsets.all(15),
           child: Column(
             children: <Widget>[
+              //Crear y eliminar días lectivos por horario
               Card(
                 child: ExpansionTile(
                   title: const Text('Registrar/Eliminar Días Lectivos por Horario'),
@@ -158,10 +265,13 @@ class _SchoolDaysBySchedulesState extends State<SchoolDaysBySchedules> {
                                   child: Text(year['year'].toString()),
                                 );
                               }).toList(),
-                              onChanged: (value) {
+                              onChanged: (value) async {
                                 setState(() {
                                   selectedYearId = value;
                                 });
+                                if (value != null) {
+                                  await fetchSchedulesByYear(value);
+                                }
                               },
                             ),
                           ),
@@ -185,7 +295,7 @@ class _SchoolDaysBySchedulesState extends State<SchoolDaysBySchedules> {
                         CustomElevatedButtonIcon(
                           label: "Generar Días Lectivos",
                           icon: Icons.save,
-                          onPressed: generateSchoolDays,
+                          onPressed: generateTeacherScheduleDaysFn,
                         ),
                         CustomElevatedButtonIcon(
                           label: "Eliminar Días Lectivos",
@@ -198,34 +308,88 @@ class _SchoolDaysBySchedulesState extends State<SchoolDaysBySchedules> {
                 ),
               ),
               const SizedBox(height: 15),
-              const CustomTitleWidget(
-                child: Text('Días Lectivos por Horario', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white)),
+              CustomTitleWidget(
+                child: Text(selectedYearId == null ? 'Días Lectivos por Horario Registrados': 'Horarios del Año Seleccionado', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white)),
               ),
               const SizedBox(height: 15),
-              ListView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: years.length,
-                itemBuilder: (context, index) {
-                  final year = years[index];
-                  final dias = schoolDaysPerYear[year['id']] ?? [];
-                  return ExpansionTile(
-                    title: Text('Año ${year['year']}'),
-                    children: dias.isEmpty
-                        ? [ListTile(title: Text("Sin días lectivos generados"))]
-                        : dias.map<Widget>((dia) {
-                      return ListTile(
-                        title: Text("ID: ${dia['id']}"),
-                        subtitle: Text("Fecha: ${dia['teachingDay']} | Día: ${dia['weekday']} | Semana: ${dia['weekNumber']}"),
-                      );
-                    }).toList(),
-                  );
-                },
-              ),
+              if (selectedYearId != null) ...[
+                SingleChildScrollView(
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(minWidth: MediaQuery.of(context).size.width),
+                    child: PaginatedDataTable(
+                      rowsPerPage: 10,
+                      columns: const <DataColumn>[
+                        DataColumn(label: Text('ID')),
+                        DataColumn(label: Text('Docente')),
+                        DataColumn(label: Text('Curso')),
+                        DataColumn(label: Text('Grado')),
+                        DataColumn(label: Text('Sección')),
+                        DataColumn(label: Text('Día')),
+                        DataColumn(label: Text('Horas')),
+                        DataColumn(label: Text('Días Lectivos')),
+                      ],
+                      source: scheduleDataSource,
+                      columnSpacing: 10,
+                      horizontalMargin: 10,
+                    ),
+                  )
+                ),
+              ] else if (years.isNotEmpty && selectedYearId == null) ...[
+                const Center(child: Text('Por favor, seleccione un año para ver los horarios.'))
+              ] else if (selectedYearId != null && schedulesByYear.isEmpty) ...[
+                const Center(child: Text('No hay horarios registrados para el año seleccionado.'))
+              ],
             ],
           ),
         ),
       ),
     );
   }
+}
+
+class ScheduleDataSource extends DataTableSource {
+  final List<dynamic> schedules;
+  final BuildContext context;
+  final Function(BuildContext, int) showDaysModal; // Función para mostrar el modal
+
+  ScheduleDataSource(this.schedules, this.context, this.showDaysModal);
+
+  @override
+  DataRow? getRow(int index) {
+    if (index >= schedules.length) {
+      return null;
+    }
+    final schedule = schedules[index];
+    final teacher = schedule['teachers'];
+    final person = teacher['persons'];
+
+    return DataRow.byIndex(
+      index: index,
+      cells: [
+        DataCell(Text(schedule['id'].toString(), style: const TextStyle(fontSize: 11))),
+        DataCell(Text("${person['names']} ${person['lastNames']}", style: const TextStyle(fontSize: 11))),
+        DataCell(Text(schedule['courses']?['course'] ?? 'N/A', style: const TextStyle(fontSize: 11))),
+        DataCell(Text(schedule['grades']?['grade'] ?? 'N/A', style: const TextStyle(fontSize: 11))),
+        DataCell(Text(schedule['sections']?['seccion'] ?? 'N/A', style: const TextStyle(fontSize: 11))),
+        DataCell(Text(schedule['weekday'] ?? '', style: const TextStyle(fontSize: 11))),
+        DataCell(Text("${schedule['startTime']} - ${schedule['endTime']}", style: const TextStyle(fontSize: 11))),
+        DataCell(
+          IconButton(
+            icon: Icon(Icons.calendar_month, color: appColors[3], size: 18),
+            tooltip: "Ver Días Lectivos",
+            onPressed: () => showDaysModal(context, schedule['id']),
+          ),
+        ),
+      ],
+    );
+  }
+
+  @override
+  bool get isRowCountApproximate => false;
+
+  @override
+  int get rowCount => schedules.length;
+
+  @override
+  int get selectedRowCount => 0;
 }

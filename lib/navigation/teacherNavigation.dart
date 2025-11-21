@@ -8,10 +8,10 @@ import 'package:schoolnet/screens/teacherScreens/qualificationsScreen.dart';
 import 'package:schoolnet/screens/teacherScreens/teachingBlockAveragesScreen.dart';
 import 'package:sidebarx/sidebarx.dart';
 
-const sidebarCanvasColor = Color(0xff3b7861); // Color de fondo del sidebar
-const sidebarAccentCanvasColor = Color(0xff256d7b); // Un color más claro para el gradiente del item seleccionado
-const sidebarActionColor = Color(0xff204760); // Color para el borde del item seleccionado (sin opacidad aquí)
-final sidebarDivider = Divider(color: Colors.white.withOpacity(0.3), height: 1); // Divisor sutil para sidebar
+const sidebarCanvasColor = Color(0xff3b7861); //Fondo
+const sidebarAccentCanvasColor = Color(0xff256d7b); //Gradiente del item
+const sidebarActionColor = Color(0xff204760); //Borde de item seleccionado
+final sidebarDivider = Divider(color: Colors.white.withOpacity(0.3), height: 1); // Divisor
 
 class TeacherNavigationRail extends StatefulWidget {
   final Map<String, dynamic> teacher;
@@ -40,6 +40,8 @@ class _TeacherNavigationRailState extends State<TeacherNavigationRail> {
   Widget build(BuildContext context) {
     final teacherId = widget.teacher['id'];
     final teacherName = widget.teacher['name'];
+    final bool isTutor = widget.teacher['isTutor'] == true;
+    final int? tutorId = widget.teacher['tutorId'];
 
     final List<Widget> pages = [
       AssistancesScreen(
@@ -62,15 +64,37 @@ class _TeacherNavigationRailState extends State<TeacherNavigationRail> {
         teacherId: teacherId,
         token: widget.token,
       ),
-      AnnualAverageScreen(
-        teacherId: teacherId,
-        token: widget.token
-      ),
       IncidentsScreen(
         teacherId: teacherId,
         token: widget.token,
       ),
     ];
+
+    final List<SidebarXItem> items = [
+      const SidebarXItem(icon: Icons.front_hand_outlined, label: 'Asistencia'),
+      const SidebarXItem(icon: Icons.format_list_numbered, label: 'Calificación'),
+      const SidebarXItem(icon: Icons.library_books_sharp, label: 'Evaluaciones'),
+      const SidebarXItem(icon: Icons.confirmation_num_outlined, label: 'Prom. Bloq. Lectivo'),
+      const SidebarXItem(icon: Icons.book_outlined, label: 'Prom. Cursos'),
+      const SidebarXItem(icon: Icons.dangerous_outlined, label: 'Incidencias'),
+    ];
+
+    // Si el docente es tutor ...
+    if (isTutor && tutorId != null) {
+      pages.add(
+        AnnualAverageScreen(
+          teacherId: teacherId,
+          tutorId: tutorId,
+          token: widget.token,
+        ),
+      );
+      items.add(
+        const SidebarXItem(
+          icon: Icons.check_box_outlined,
+          label: 'Prom. General',
+        ),
+      );
+    }
 
     return Scaffold(
       body: Row(
@@ -153,21 +177,15 @@ class _TeacherNavigationRailState extends State<TeacherNavigationRail> {
                 ),
               );
             },
-            items: const [
-              SidebarXItem(icon: Icons.front_hand_outlined, label: 'Asistencia'),
-              SidebarXItem(icon: Icons.numbers, label: 'Calificación'),
-              SidebarXItem(icon: Icons.library_books_sharp, label: 'Evaluaciones'),
-              SidebarXItem(icon: Icons.confirmation_num_outlined, label: 'Prom. Bloq. Lectivo'),
-              SidebarXItem(icon: Icons.book_outlined, label: 'Prom. Cursos'),
-              SidebarXItem(icon: Icons.check_box_outlined, label: 'Prom. General'),
-              SidebarXItem(icon: Icons.dangerous_outlined, label: 'Incidencias'),
-            ],
+            items: items
           ),
           Expanded(
             child: AnimatedBuilder(
               animation: _controller,
               builder: (context, _) {
-                return pages[_controller.selectedIndex];
+                final index = _controller.selectedIndex;
+                final safeIndex = index < pages.length ? index : 0;
+                return pages[safeIndex];
               },
             ),
           ),

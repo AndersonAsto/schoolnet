@@ -29,7 +29,6 @@ class _MyAppState extends State<MyApp> {
         Locale('es', 'ES'),
         Locale('en', 'US'),
       ],
-      // 🔹 Arrancamos en StartupScreen
       home: const StartupScreen(),
       locale: const Locale('es', 'ES'),
       theme: ThemeData(

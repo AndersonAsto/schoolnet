@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:schoolnet/navigation/adminNavigation.dart';
+import 'package:schoolnet/navigation/parentNavigation.dart';
 import 'package:schoolnet/navigation/teacherNavigation.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
@@ -46,11 +47,88 @@ class _LoginScreenState extends State<LoginScreen> {
         await storage.write(key: "role", value: data["role"]);
         await storage.write(key: "user", value: jsonEncode(data["user"]));
 
-        // 🔑 Normalizamos el rol a minúsculas
         final role = (data["role"] as String).toLowerCase();
 
-        // Redirigir según rol
-        Widget nextPage;
+        // 👉 Caso especial: Apoderado
+        if (role == "apoderado") {
+          final user = data["user"];
+          final userId = user["id"]; // Users.id
+
+          final parentRes = await http.get(
+            Uri.parse(
+              "http://localhost:3000/api/parentAssignments/by-user/$userId",
+            ),
+          );
+
+          if (parentRes.statusCode == 200) {
+            final decoded = jsonDecode(parentRes.body);
+
+            if (decoded is List && decoded.isNotEmpty) {
+              final parentData = decoded[0];
+
+              final studentId = parentData["students"]["id"];
+              final parentPersonId = parentData["persons"]["id"];
+              final yearId = parentData["years"]["id"];
+
+              await storage.write(
+                key: "parent_assignment",
+                value: jsonEncode(parentData),
+              );
+              await storage.write(
+                key: "parent_user_id",
+                value: userId.toString(),
+              );
+              await storage.write(
+                key: "parent_person_id",
+                value: parentPersonId.toString(),
+              );
+              await storage.write(
+                key: "parent_student_id",
+                value: studentId.toString(),
+              );
+              await storage.write(
+                key: "parent_year_id",
+                value: yearId.toString(),
+              );
+
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => ParentsNavigationRail(
+                    parent: {
+                      ...user,
+                      "studentId": studentId,
+                      "userId": userId,
+                      "parentPersonId": parentPersonId,
+                      "yearId": yearId,
+                    },
+                    token: data["token"],
+                  ),
+                ),
+              );
+            } else {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text("No se encontraron asignaciones de apoderado."),
+                ),
+              );
+            }
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  "No se pudo cargar datos de apoderado: ${parentRes.body}",
+                ),
+              ),
+            );
+          }
+
+          return; // importante
+        }
+
+        // 👉 Admin / Docente igual que antes
+        Widget nextPage = const LoginScreen();
+
         if (role == "administrador") {
           nextPage = const AdminNavigationRail();
         } else if (role == "docente") {
@@ -60,7 +138,7 @@ class _LoginScreenState extends State<LoginScreen> {
           );
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Rol no autorizado")),
+            const SnackBar(content: Text("Rol no autorizado.")),
           );
           return;
         }
@@ -117,7 +195,10 @@ class _LoginScreenState extends State<LoginScreen> {
                       decoration: InputDecoration(
                         labelText: "Usuario",
                         labelStyle: const TextStyle(color: Colors.white),
-                        prefixIcon: const Icon(Icons.person, color: Colors.white),
+                        prefixIcon: const Icon(
+                          Icons.person,
+                          color: Colors.white,
+                        ),
                         filled: true,
                         fillColor: const Color(0xff256d7b),
                         border: OutlineInputBorder(
@@ -135,7 +216,10 @@ class _LoginScreenState extends State<LoginScreen> {
                       decoration: InputDecoration(
                         labelText: "Contraseña",
                         labelStyle: const TextStyle(color: Colors.white),
-                        prefixIcon: const Icon(Icons.lock, color: Colors.white),
+                        prefixIcon: const Icon(
+                          Icons.lock,
+                          color: Colors.white,
+                        ),
                         suffixIcon: IconButton(
                           icon: Icon(
                             _obscurePassword
@@ -144,8 +228,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             color: Colors.white,
                           ),
                           onPressed: () {
-                            setState(() =>
-                            _obscurePassword = !_obscurePassword);
+                            setState(() => _obscurePassword = !_obscurePassword);
                           },
                         ),
                         filled: true,
@@ -171,11 +254,15 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         onPressed: _loading ? null : _login,
                         child: _loading
-                            ? const CircularProgressIndicator(color: Colors.white)
+                            ? const CircularProgressIndicator(
+                          color: Colors.white,
+                        )
                             : const Text(
                           "Ingresar",
                           style: TextStyle(
-                              fontSize: 18, color: Colors.white),
+                            fontSize: 18,
+                            color: Colors.white,
+                          ),
                         ),
                       ),
                     ),

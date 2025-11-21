@@ -507,8 +507,7 @@ class _SchedulesScreenState extends State<SchedulesScreen> {
                       DataColumn(label: Text('Grado')),
                       DataColumn(label: Text('Sección')),
                       DataColumn(label: Text('Día')),
-                      DataColumn(label: Text('Hora Inicio')),
-                      DataColumn(label: Text('Hora Fin')),
+                      DataColumn(label: Text('Horas')),
                       //DataColumn(label: Text('Estado')),
                       DataColumn(label: Text('Acciones'))
                     ],
@@ -558,8 +557,7 @@ class _SchedulesDataSource extends DataTableSource {
         DataCell(Text('(${schedule['grades']['id']}) ${schedule['grades']['grade']}')),
         DataCell(Text('(${schedule['sections']['id']}) ${schedule['sections']['seccion']}')),
         DataCell(Text(schedule['weekday'])),
-        DataCell(Text(schedule['startTime'])),
-        DataCell(Text(schedule['endTime'])),
+        DataCell(Text('${schedule['startTime']} - ${schedule['endTime']}', textAlign: TextAlign.center,)),
         //DataCell(Text(schedule['status'] == true ? 'Activo' : 'Inactivo')),
         DataCell(Row(
           children: [

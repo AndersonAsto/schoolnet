@@ -88,7 +88,6 @@ class _GeneralAverageScreenState extends State<GeneralAverageScreen> {
     });
 
     try {
-      // Peticiones en paralelo (más eficiente)
       final responses = await Future.wait([
         http.get(
           Uri.parse("http://localhost:3000/api/teacherGroups/by-user/${widget.teacherId}/by-year/$selectedYearId"),
@@ -414,7 +413,6 @@ class _GeneralAverageScreenState extends State<GeneralAverageScreen> {
                             );
                             return;
                           }
-
                           final url = Uri.parse(
                               "http://localhost:3000/api/teachingblockaverage/byStudent/$selectedStudentId/year/${yearIdController.text}/assignment/$selectedScheduleId"
                           );
