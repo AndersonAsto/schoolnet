@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:schoolnet/screens/adminScreens/yearsScreen.dart';
-import 'package:schoolnet/screens/teacherScreens/assistancesScreen.dart';
+import 'package:schoolnet/screens/teacherScreens/attendancesScreen.dart';
 import 'dart:convert';
 import 'package:schoolnet/utils/colors.dart';
 import 'package:schoolnet/utils/customDataSelection.dart';
@@ -68,7 +68,7 @@ class _QualificationsScreenState extends State<QualificationsScreen> {
     });
 
     final url = Uri.parse(
-      "http://localhost:3000/api/schedules/by-user/${widget.teacherId}/year/$selectedYearId",
+      "${generalUrl}api/schedules/by-user/${widget.teacherId}/year/$selectedYearId",
     );
 
     final res = await http.get(
@@ -119,7 +119,7 @@ class _QualificationsScreenState extends State<QualificationsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Calificación Diaria - Docente ${widget.teacherId}', style: const TextStyle(fontSize: 15, color: Colors.white)),
+        title: const Text('Calificación Diaria', style: TextStyle(fontSize: 15, color: Colors.white)),
         automaticallyImplyLeading: false,
         backgroundColor: appColors[3],
       ),
@@ -216,7 +216,7 @@ class _QualificationsScreenState extends State<QualificationsScreen> {
                   });
                   try {
                     final url = Uri.parse(
-                        "http://localhost:3000/api/scheduleSDs/by-schedule/$selectedScheduleId");
+                        "${generalUrl}api/scheduleSDs/by-schedule/$selectedScheduleId");
                     final res = await http.get(url, headers: {
                       "Content-Type": "application/json",
                     });
@@ -368,20 +368,20 @@ class _QualificationsDialogState extends State<QualificationsDialog> {
     try {
       // 1️⃣ Obtener alumnos inscritos para el horario
       final studentsRes = await http.get(
-        Uri.parse("http://localhost:3000/api/studentEnrollments/bySchedule/${widget.scheduleId}"),
+        Uri.parse("${generalUrl}api/studentEnrollments/bySchedule/${widget.scheduleId}"),
       );
 
       // 2️⃣ Obtener asistencias del día para mostrar estado
       final assistancesRes = await http.get(
         Uri.parse(
-          "http://localhost:3000/api/assistances/byScheduleAndDay?scheduleId=${widget.scheduleId}&schoolDayId=${widget.schoolDayId}",
+          "${generalUrl}api/assistances/byScheduleAndDay?scheduleId=${widget.scheduleId}&schoolDayId=${widget.schoolDayId}",
         ),
       );
 
       // 3️⃣ Obtener calificaciones existentes
       final qualificationsRes = await http.get(
         Uri.parse(
-          "http://localhost:3000/api/qualifications/byScheduleAndDay?scheduleId=${widget.scheduleId}&schoolDayId=${widget.schoolDayId}",
+          "${generalUrl}api/qualifications/byScheduleAndDay?scheduleId=${widget.scheduleId}&schoolDayId=${widget.schoolDayId}",
         ),
       );
 
@@ -453,7 +453,7 @@ class _QualificationsDialogState extends State<QualificationsDialog> {
     try {
       if (nuevos.isNotEmpty) {
         final resCreate = await http.post(
-          Uri.parse("http://localhost:3000/api/qualifications/bulkCreate"),
+          Uri.parse("${generalUrl}api/qualifications/bulkCreate"),
           headers: {"Content-Type": "application/json"},
           body: json.encode(nuevos),
         );
@@ -464,7 +464,7 @@ class _QualificationsDialogState extends State<QualificationsDialog> {
 
       if (existentes.isNotEmpty) {
         final resUpdate = await http.put(
-          Uri.parse("http://localhost:3000/api/qualifications/bulkUpdate"),
+          Uri.parse("${generalUrl}api/qualifications/bulkUpdate"),
           headers: {"Content-Type": "application/json"},
           body: json.encode(existentes),
         );

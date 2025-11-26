@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:schoolnet/screens/adminScreens/yearsScreen.dart';
-import 'package:schoolnet/screens/teacherScreens/assistancesScreen.dart';
+import 'package:schoolnet/screens/teacherScreens/attendancesScreen.dart';
 import 'package:schoolnet/utils/colors.dart';
 import 'package:http/http.dart' as http;
 import 'package:schoolnet/utils/customDataSelection.dart';
@@ -72,7 +72,7 @@ class _IncidentsScreenState extends State<IncidentsScreen> {
     });
 
     final url = Uri.parse(
-      "http://localhost:3000/api/schedules/by-user/${widget.teacherId}/year/$selectedYearId",
+      "${generalUrl}api/schedules/by-user/${widget.teacherId}/year/$selectedYearId",
     );
 
     final res = await http.get(
@@ -109,7 +109,7 @@ class _IncidentsScreenState extends State<IncidentsScreen> {
       selectedStudentId = null;
     });
 
-    final url = Uri.parse("http://localhost:3000/api/studentEnrollments/bySchedule/$selectedScheduleId");
+    final url = Uri.parse("${generalUrl}api/studentEnrollments/bySchedule/$selectedScheduleId");
 
     try {
       final res = await http.get(
@@ -145,7 +145,7 @@ class _IncidentsScreenState extends State<IncidentsScreen> {
       return;
     }
 
-    final url = Uri.parse("http://localhost:3000/api/incidents/create");
+    final url = Uri.parse("${generalUrl}api/incidents/create");
     final body = json.encode({
       "studentId": int.parse(selectedStudentId!),
       "scheduleId": int.parse(selectedScheduleId!),
@@ -192,7 +192,7 @@ class _IncidentsScreenState extends State<IncidentsScreen> {
     setState(() => loadingIncidents = true);
 
     final url = Uri.parse(
-        "http://localhost:3000/api/incidents/byStudentAndSchedule/$selectedStudentId/$selectedScheduleId");
+        "${generalUrl}api/incidents/byStudentAndSchedule/$selectedStudentId/$selectedScheduleId");
 
     try {
       final res = await http.get(
@@ -228,7 +228,7 @@ class _IncidentsScreenState extends State<IncidentsScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text("Incidencias - Docente ${widget.teacherId}", style: const TextStyle(fontSize: 15, color: Colors.white),),
+        title: const Text("Incidencias", style: TextStyle(fontSize: 15, color: Colors.white),),
         backgroundColor: appColors[3],
       ),
       body: SelectableRegion(
@@ -326,7 +326,7 @@ class _IncidentsScreenState extends State<IncidentsScreen> {
                   });
                   try {
                     final url = Uri.parse(
-                        "http://localhost:3000/api/scheduleSDs/by-schedule/$selectedScheduleId");
+                        "${generalUrl}api/scheduleSDs/by-schedule/$selectedScheduleId");
                     final res = await http.get(url, headers: {
                       "Content-Type": "application/json",
                     });

@@ -82,17 +82,16 @@ class _TeachingBlockAveragesScreenState extends State<TeachingBlockAveragesScree
     });
 
     try {
-      // Peticiones en paralelo (más eficiente que hacerlas por separado)
       final responses = await Future.wait([
         http.get(
-          Uri.parse("http://localhost:3000/api/teacherGroups/by-user/${widget.teacherId}/by-year/$selectedYearId"),
+          Uri.parse("${generalUrl}api/teacherGroups/by-user/${widget.teacherId}/by-year/$selectedYearId"),
           headers: {
             "Authorization": "Bearer ${token ?? widget.token}",
             "Content-Type": "application/json",
           },
         ),
         http.get(
-          Uri.parse("http://localhost:3000/api/teachingBlocks/byYear/$selectedYearId"),
+          Uri.parse("${generalUrl}api/teachingBlocks/byYear/$selectedYearId"),
           headers: {
             "Authorization": "Bearer ${token ?? widget.token}",
             "Content-Type": "application/json",
@@ -151,7 +150,7 @@ class _TeachingBlockAveragesScreenState extends State<TeachingBlockAveragesScree
       students = [];
     });
 
-    final url = Uri.parse("http://localhost:3000/api/studentEnrollments/by-group/$assignmentId");
+    final url = Uri.parse("${generalUrl}api/studentEnrollments/by-group/$assignmentId");
 
     final res = await http.get(
       url,
@@ -186,7 +185,7 @@ class _TeachingBlockAveragesScreenState extends State<TeachingBlockAveragesScree
       studentExams = [];
     });
 
-    final url = Uri.parse("http://localhost:3000/api/exams/student/$selectedStudentId/group/$assignmentId");
+    final url = Uri.parse("${generalUrl}api/exams/student/$selectedStudentId/group/$assignmentId");
 
     try {
       final res = await http.get(
@@ -226,7 +225,7 @@ class _TeachingBlockAveragesScreenState extends State<TeachingBlockAveragesScree
       return;
     }
 
-    final previewUrl = Uri.parse("http://localhost:3000/api/teachingblockaverage/preview");
+    final previewUrl = Uri.parse("${generalUrl}api/teachingblockaverage/preview");
 
     try {
       final res = await http.post(
@@ -270,7 +269,7 @@ class _TeachingBlockAveragesScreenState extends State<TeachingBlockAveragesScree
   }
 
   Future<void> _saveTeachingBlockAverage(Map<String, dynamic> record) async {
-    final saveUrl = Uri.parse("http://localhost:3000/api/teachingblockaverage/calculate");
+    final saveUrl = Uri.parse("${generalUrl}api/teachingblockaverage/calculate");
 
     try {
       final res = await http.post(
@@ -319,7 +318,7 @@ class _TeachingBlockAveragesScreenState extends State<TeachingBlockAveragesScree
       final responses = await Future.wait([
         http.get(
           Uri.parse(
-              "http://localhost:3000/api/qualifications/by-group/$assignmentId/student/$selectedStudentId"),
+              "${generalUrl}api/qualifications/by-group/$assignmentId/student/$selectedStudentId"),
           headers: {
             "Authorization": "Bearer ${token ?? widget.token}",
             "Content-Type": "application/json",
@@ -327,7 +326,7 @@ class _TeachingBlockAveragesScreenState extends State<TeachingBlockAveragesScree
         ),
         http.get(
           Uri.parse(
-              "http://localhost:3000/api/assistances/by-group/$assignmentId/student/$selectedStudentId"),
+              "${generalUrl}api/assistances/by-group/$assignmentId/student/$selectedStudentId"),
           headers: {
             "Authorization": "Bearer ${token ?? widget.token}",
             "Content-Type": "application/json",
@@ -397,7 +396,7 @@ class _TeachingBlockAveragesScreenState extends State<TeachingBlockAveragesScree
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("Promedios de Bloque Lectivo - Docente ${widget.teacherId}", style: const TextStyle(fontSize: 15, color: Colors.white),),
+        title: const Text("Promedios de Bloque Lectivo", style: TextStyle(fontSize: 15, color: Colors.white),),
         automaticallyImplyLeading: false,
         backgroundColor: appColors[3],
       ),
@@ -621,7 +620,7 @@ class _TeachingBlockAveragesScreenState extends State<TeachingBlockAveragesScree
                           }
 
                           final url = Uri.parse(
-                              "http://localhost:3000/api/teachingblockaverage/byStudent/$selectedStudentId/year/${yearIdController.text}/assignment/$assignmentId"
+                              "${generalUrl}api/teachingblockaverage/byStudent/$selectedStudentId/year/${yearIdController.text}/assignment/$assignmentId"
                           );
                           final res = await http.get(url, headers: {
                             "Authorization": "Bearer ${token ?? widget.token}",

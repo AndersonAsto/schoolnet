@@ -24,9 +24,23 @@ class _CoursesScreenState extends State<CoursesScreen> {
 
   List<Map<String, dynamic>> filteredCoursesList = [];
   List<Map<String,dynamic>> coursesList = [];
-  late _CoursesDataSource _coursesDataSource;
+
   Map<String, dynamic>? savedCourses;
+
+  late _CoursesDataSource _coursesDataSource;
+
   int? idToEdit;
+
+  @override
+  void initState() {
+    super.initState();
+    getCourses();
+    _coursesDataSource = _CoursesDataSource(
+      coursesList: coursesList,
+      onEdit: _handleEditCourse,
+      onDelete: deleteCourse,
+    );
+  }
 
   Future<void> saveCourse() async {
     if(courseController.text.trim().isEmpty){
@@ -154,16 +168,6 @@ class _CoursesScreenState extends State<CoursesScreen> {
     }
   }
 
-  void clearTextFields (){
-    idController.clear();
-    courseController.clear();
-    recurrenceController.clear();
-    statusController.clear();
-    createdAtController.clear();
-    updatedAtController.clear();
-    filterCourses("");
-  }
-
   Future<void> cancelUpdate () async {
     if (idToEdit != null) {
       setState(() {
@@ -174,6 +178,16 @@ class _CoursesScreenState extends State<CoursesScreen> {
     } else {
       CustomNotifications.showNotification(context, "No hay edición activa para cancelar.", color: Colors.blueGrey);
     }
+  }
+
+  void clearTextFields (){
+    idController.clear();
+    courseController.clear();
+    recurrenceController.clear();
+    statusController.clear();
+    createdAtController.clear();
+    updatedAtController.clear();
+    filterCourses("");
   }
 
   void _handleEditCourse(Map<String, dynamic> course) {
@@ -202,17 +216,6 @@ class _CoursesScreenState extends State<CoursesScreen> {
         onDelete: deleteCourse,
       );
     });
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    getCourses();
-    _coursesDataSource = _CoursesDataSource(
-      coursesList: coursesList,
-      onEdit: _handleEditCourse,
-      onDelete: deleteCourse,
-    );
   }
 
   @override

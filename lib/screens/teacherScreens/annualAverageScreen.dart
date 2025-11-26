@@ -1,6 +1,8 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:schoolnet/screens/adminScreens/yearsScreen.dart';
+import 'package:schoolnet/screens/parentsScreen/StudentPerformanceScreen.dart';
 import 'package:schoolnet/utils/colors.dart';
 import 'package:schoolnet/utils/customDataSelection.dart';
 import 'package:http/http.dart' as http;
@@ -60,7 +62,7 @@ class _AnnualAverageScreenState extends State<AnnualAverageScreen> {
     setState(() => loadingTutorInfo = true);
 
     final url = Uri.parse(
-        "http://localhost:3000/api/tutors/by-id/${widget.tutorId}");
+        "${generalUrl}api/tutors/by-id/${widget.tutorId}");
 
     try {
       final res = await http.get(
@@ -102,7 +104,6 @@ class _AnnualAverageScreenState extends State<AnnualAverageScreen> {
     }
   }
 
-  /// Botón "Cargar Estudiantes"
   Future<void> _onLoadYearPressed() async {
     final selectedYearId = yearIdController.text.trim();
     if (selectedYearId.isEmpty) {
@@ -119,18 +120,22 @@ class _AnnualAverageScreenState extends State<AnnualAverageScreen> {
     });
 
     await _loadStudentsByTutor();
-    await _fetchAnnualAveragesByTutor(); // 🔹 Cargar promedios del grupo
+    await _fetchAnnualAveragesByTutor(); //  Cargar promedios del grupo
   }
 
   Future<void> _loadStudentsByTutor() async {
+    final selectedYearId = yearIdController.text.trim();
     setState(() {
       loadingStudents = true;
       students = [];
       selectedStudentId = null;
     });
 
-    final url = Uri.parse(
-        "http://localhost:3000/api/studentEnrollments/by-tutor/${widget.tutorId}");
+    if (kDebugMode) {
+      print(students);
+    }
+
+    final url = Uri.parse("${generalUrl}api/studentEnrollments/by-tutor/${widget.tutorId}/by-year/$selectedYearId");
 
     try {
       final res = await http.get(
@@ -164,14 +169,13 @@ class _AnnualAverageScreenState extends State<AnnualAverageScreen> {
     }
   }
 
-  /// 🔹 Usa: GET /api/annualAverage/by-year-&-tutor/:yearId/:tutorId
   Future<void> _fetchAnnualAveragesByTutor() async {
     if (yearIdController.text.isEmpty) return;
 
     setState(() => loadingAnnualAverages = true);
 
     final url = Uri.parse(
-        "http://localhost:3000/api/annualAverage/by-year-&-tutor/${yearIdController.text}/${widget.tutorId}");
+        "${generalUrl}api/annualAverage/by-year-&-tutor/${yearIdController.text}/${widget.tutorId}");
 
     try {
       final res = await http.get(
@@ -194,9 +198,7 @@ class _AnnualAverageScreenState extends State<AnnualAverageScreen> {
       } else {
         setState(() => annualAverages = []);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text(
-                  "Error al obtener promedios anuales del grupo: ${res.body}")),
+          SnackBar(content: Text("Error al obtener promedios anuales del grupo: ${res.body}")),
         );
       }
     } catch (e) {
@@ -208,7 +210,6 @@ class _AnnualAverageScreenState extends State<AnnualAverageScreen> {
     }
   }
 
-  /// 🔹 Usa: GET /api/annualAverage/by-year-&-student/:yearId/:studentId
   Future<void> _fetchAnnualAverageByStudent() async {
     if (selectedStudentId == null || yearIdController.text.isEmpty) {
       return;
@@ -216,8 +217,7 @@ class _AnnualAverageScreenState extends State<AnnualAverageScreen> {
 
     setState(() => loadingAnnualAverages = true);
 
-    final url = Uri.parse(
-        "http://localhost:3000/api/annualAverage/by-year-&-student/${yearIdController.text}/$selectedStudentId");
+    final url = Uri.parse("${generalUrl}api/annualAverage/by-year-&-student/${yearIdController.text}/$selectedStudentId");
 
     try {
       final res = await http.get(
@@ -253,7 +253,6 @@ class _AnnualAverageScreenState extends State<AnnualAverageScreen> {
     }
   }
 
-  /// 🔹 Botón que muestra el diálogo de promedios por curso (ya lo tenías armado)
   Future<void> _fetchGeneralAveragesForStudent() async {
     if (selectedStudentId == null || yearIdController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -266,7 +265,7 @@ class _AnnualAverageScreenState extends State<AnnualAverageScreen> {
     setState(() => loadingGeneralAverages = true);
 
     final url = Uri.parse(
-        "http://localhost:3000/api/generalAvarage/by-filters?yearId=${yearIdController.text}&studentId=$selectedStudentId");
+        "${generalUrl}api/generalAvarage/by-filters?yearId=${yearIdController.text}&studentId=$selectedStudentId");
 
     try {
       final res = await http.get(
@@ -316,7 +315,7 @@ class _AnnualAverageScreenState extends State<AnnualAverageScreen> {
     setState(() => loadingAnnualAverage = true);
 
     try {
-      final url = Uri.parse("http://localhost:3000/api/annualaverage/calculate");
+      final url = Uri.parse("${generalUrl}api/annualaverage/calculate");
 
       final res = await http.post(
         url,
@@ -337,7 +336,7 @@ class _AnnualAverageScreenState extends State<AnnualAverageScreen> {
           SnackBar(content: Text(data["message"] ?? "Promedio anual calculado correctamente.")),
         );
 
-        // 🔹 Después de guardar/actualizar en backend, refrescamos la tabla
+        //  Después de guardar/actualizar en backend, refrescamos la tabla
         // Solo si aún hay estudiante seleccionado
         if (selectedStudentId != null) {
           await _fetchAnnualAverageByStudent();
@@ -383,7 +382,7 @@ class _AnnualAverageScreenState extends State<AnnualAverageScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 🔹 Selección de año
+              // Selección de año
               Row(
                 children: [
                   Expanded(
@@ -423,7 +422,7 @@ class _AnnualAverageScreenState extends State<AnnualAverageScreen> {
                 ],
               ),
               const SizedBox(height: 15),
-              // 🔹 Dropdown de estudiantes (sin grupo docente)
+              // Dropdown de estudiantes (sin grupo docente)
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 0),
                 child: loadingStudents
@@ -442,11 +441,9 @@ class _AnnualAverageScreenState extends State<AnnualAverageScreen> {
                             (s) => s["id"].toString() == selectedStudentId)
                         ? selectedStudentId
                         : null,
-                    items: students
-                        .map<DropdownMenuItem<String>>((student) {
+                    items: students.map<DropdownMenuItem<String>>((student) {
                       final person = student["persons"];
-                      final studentName =
-                          "${person["names"]} ${person["lastNames"]}";
+                      final studentName = "${person["names"]} ${person["lastNames"]}";
                       return DropdownMenuItem<String>(
                         value: student["id"].toString(),
                         child: Text(studentName),
@@ -458,10 +455,10 @@ class _AnnualAverageScreenState extends State<AnnualAverageScreen> {
                         annualAverages = [];
                       });
                       if (val != null) {
-                        // 🔹 Cargar promedio anual SOLO de ese estudiante
+                        //  Cargar promedio anual SOLO de ese estudiante
                         await _fetchAnnualAverageByStudent();
                       } else {
-                        // 🔹 Volver a cargar el grupo completo
+                        //  Volver a cargar el grupo completo
                         await _fetchAnnualAveragesByTutor();
                       }
                     },
@@ -539,6 +536,31 @@ class _AnnualAverageScreenState extends State<AnnualAverageScreen> {
                         borderRadius: BorderRadius.circular(10),
                       ),
                     ),
+                  ),
+                ),
+                const SizedBox(height: 15),
+                Center(
+                  child: GenerateReportButton(
+                    yearId: yearIdController.text.isNotEmpty ? yearIdController.text : null,
+                    studentId: selectedStudentId,
+                    studentName: () {
+                      try {
+                        final st = students.firstWhere(
+                              (s) => s["id"].toString() == selectedStudentId,
+                          orElse: () => null,
+                        );
+                        if (st == null) return null;
+                        final names = st['persons']["names"] ?? "";
+                        final lastNames = st['persons']["lastNames"] ?? "";
+                        return "$names $lastNames";
+                      } catch (_) {
+                        return null;
+                      }
+                    }(),
+                    token: widget.token,
+                    yearLabel: yearDisplayController.text.isNotEmpty
+                        ? yearDisplayController.text
+                        : null,
                   ),
                 ),
                 const SizedBox(height: 15),

@@ -64,7 +64,7 @@ class _AssistancesScreenState extends State<AssistancesScreen> {
     });
 
     final url = Uri.parse(
-      "http://localhost:3000/api/schedules/by-user/${widget.teacherId}/year/$selectedYearId",
+      "${generalUrl}api/schedules/by-user/${widget.teacherId}/year/$selectedYearId",
     );
     print("📅 Cargando horarios para teacherId=${widget.teacherId}, yearId=$selectedYearId");
 
@@ -116,10 +116,7 @@ class _AssistancesScreenState extends State<AssistancesScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          "Asistencias - Docente ${widget.teacherId}",
-          style: const TextStyle(fontSize: 15, color: Colors.white),
-        ),
+        title: const Text("Asistencias", style: TextStyle(fontSize: 15, color: Colors.white),),
         automaticallyImplyLeading: false,
         backgroundColor: appColors[3],
       ),
@@ -214,7 +211,7 @@ class _AssistancesScreenState extends State<AssistancesScreen> {
                   });
                   try {
                     final url = Uri.parse(
-                        "http://localhost:3000/api/scheduleSDs/by-schedule/$selectedScheduleId");
+                        "${generalUrl}api/scheduleSDs/by-schedule/$selectedScheduleId");
                     final res = await http.get(url, headers: {
                       "Content-Type": "application/json",
                     });
@@ -368,10 +365,10 @@ class _AssistancesDialogState extends State<AssistancesDialog> {
 
     try {
       final studentsRes = await http.get(
-        Uri.parse("http://localhost:3000/api/studentEnrollments/bySchedule/${widget.scheduleId}"),
+        Uri.parse("${generalUrl}api/studentEnrollments/bySchedule/${widget.scheduleId}"),
       );
       final assistancesRes = await http.get(Uri.parse(
-        "http://localhost:3000/api/assistances/byScheduleAndDay?scheduleId=${widget.scheduleId}&schoolDayId=${widget.schoolDayId}",
+        "${generalUrl}api/assistances/byScheduleAndDay?scheduleId=${widget.scheduleId}&schoolDayId=${widget.schoolDayId}",
       ));
 
       if (studentsRes.statusCode == 200 && assistancesRes.statusCode == 200) {
@@ -433,7 +430,7 @@ class _AssistancesDialogState extends State<AssistancesDialog> {
     try {
       if (nuevos.isNotEmpty) {
         final resCreate = await http.post(
-          Uri.parse("http://localhost:3000/api/assistances/bulkCreate"),
+          Uri.parse("${generalUrl}api/assistances/bulkCreate"),
           headers: {"Content-Type": "application/json"},
           body: json.encode(nuevos),
         );
@@ -444,7 +441,7 @@ class _AssistancesDialogState extends State<AssistancesDialog> {
 
       if (existentes.isNotEmpty) {
         final resUpdate = await http.put(
-          Uri.parse("http://localhost:3000/api/assistances/bulkUpdate"),
+          Uri.parse("${generalUrl}api/assistances/bulkUpdate"),
           headers: {"Content-Type": "application/json"},
           body: json.encode(existentes),
         );

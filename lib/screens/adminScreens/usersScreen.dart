@@ -315,7 +315,7 @@ class _UsersScreenState extends State<UsersScreen> {
                         const SizedBox(width: 10),
                         Expanded(
                           child: SizedBox(
-                            height: 36, // Increased height for better tap target
+                            height: 36,
                             child: TextField(
                               controller: passwordController,
                               obscureText: !_showPassword,
@@ -366,7 +366,6 @@ class _UsersScreenState extends State<UsersScreen> {
                   ],
                 ),
               ),
-              // Sección de la tabla de datos
               const SizedBox(height: 15),
               const CustomTitleWidget(
                 child: Text('Usuarios Registrados', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white)),
@@ -398,15 +397,13 @@ class _UsersScreenState extends State<UsersScreen> {
                       DataColumn(label: Text('Cargo')),
                       DataColumn(label: Text('Acciones')),
                     ],
-                    source: _usersDataSource, // Our custom data source
-                    rowsPerPage: 25, // Set 15 rows per page
+                    source: _usersDataSource,
+                    rowsPerPage: 25,
                     onPageChanged: (int page) {
-                      // Optional: You can add logic here if you need to do something when the page changes
                       print('Page changed to: $page');
                     },
-                    // Optional: Adjust available rows per page options
                     availableRowsPerPage: const [5, 15, 25, 35, 50],
-                    showCheckboxColumn: false, // Hide checkboxes if not needed
+                    showCheckboxColumn: false,
                   ),
                 ),
               )
@@ -442,8 +439,6 @@ class _UsersDataSource extends DataTableSource {
         DataCell(Text(user['userName'])),
         DataCell(Text(user['role'] ?? '-')),
         DataCell(Text(user['chargeDetail'] ?? '-')),
-        //DataCell(Text(user['status'] == true ? 'Activo' : 'Inactivo')),
-        //DataCell(Text(user['createdAt'].toString())),
         DataCell(Row(
           children: [
             IconButton(

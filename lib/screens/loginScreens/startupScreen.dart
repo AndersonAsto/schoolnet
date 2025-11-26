@@ -6,6 +6,7 @@ import 'package:schoolnet/navigation/adminNavigation.dart';
 import 'package:schoolnet/navigation/parentNavigation.dart';
 import 'package:schoolnet/navigation/teacherNavigation.dart';
 import 'package:schoolnet/screens/loginScreens/loginScreen.dart';
+import 'package:schoolnet/utils/colors.dart';
 
 class StartupScreen extends StatefulWidget {
   const StartupScreen({super.key});
@@ -30,7 +31,7 @@ class _StartupScreenState extends State<StartupScreen> {
       try {
         // Consulta sobre el usuario
         final res = await http.get(
-          Uri.parse("http://localhost:3000/api/auth/profile"),
+          Uri.parse("${generalUrl}api/auth/profile"),
           headers: {
             "Authorization": "Bearer $token",
           },

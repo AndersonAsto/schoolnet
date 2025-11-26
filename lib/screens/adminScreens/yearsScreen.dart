@@ -3,6 +3,7 @@ import 'package:schoolnet/services/apiService.dart';
 import 'package:schoolnet/utils/colors.dart';
 import 'dart:convert';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:schoolnet/utils/customNotifications.dart';
 import 'package:schoolnet/utils/customTextFields.dart';
 
 final storage = FlutterSecureStorage();
@@ -36,16 +37,22 @@ class _YearsScreenState extends State<YearsScreen> {
   Future<void> fetchYears() async {
     try {
       final response = await ApiService.request("api/years/list");
+      
+      final Map<String, dynamic> errorData = json.decode(response.body);
+      final backendMessage = errorData['message'] ?? "Mensaje de error desconocido";
+      final formattedMessage = "Error ${response.statusCode}: ${backendMessage}";
 
       if (response.statusCode == 200) {
         setState(() {
           years = json.decode(response.body);
         });
       } else {
-        print("Error al obtener años: ${response.body}");
+        CustomNotifications.showNotification(context, formattedMessage, color: Colors.red);
+        print("Error al eliminar usuario (HTTP ${response.statusCode}): ${backendMessage}");
       }
     } catch (e) {
-      print("Error al conectar: $e");
+      CustomNotifications.showNotification(context, "Error de servidor inesperado.", color: Colors.red);
+      print("Fallo al parsear JSON. Body: $e");
     }
   }
 

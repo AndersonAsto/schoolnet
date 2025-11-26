@@ -28,7 +28,7 @@ class ApiService {
         return true;
       }
     } catch (e) {
-      debugPrint("❌ Error al refrescar token: $e");
+      debugPrint("Error al refrescar token: $e.");
     }
     return false;
   }
@@ -69,7 +69,7 @@ class ApiService {
           response = await http.get(uri, headers: {...defaultHeaders, ...?headers});
       }
 
-      // 🔑 Si el token está vencido, intentar refrescar
+      // Refrescar si el token vence
       if (response.statusCode == 401) {
         final refreshed = await _refreshToken();
         if (refreshed) {
@@ -102,7 +102,7 @@ class ApiService {
       }
       return response;
     } catch (e) {
-      debugPrint("❌ Error en request: $e");
+      debugPrint("Error en request: $e.");
       rethrow;
     }
   }

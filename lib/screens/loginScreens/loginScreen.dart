@@ -5,6 +5,7 @@ import 'package:schoolnet/navigation/teacherNavigation.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:schoolnet/utils/colors.dart';
 
 final storage = FlutterSecureStorage();
 
@@ -28,7 +29,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
     try {
       final response = await http.post(
-        Uri.parse("http://localhost:3000/api/auth/login"),
+        Uri.parse("${generalUrl}api/auth/login"),
         headers: {
           "Content-Type": "application/json",
         },
@@ -41,7 +42,7 @@ class _LoginScreenState extends State<LoginScreen> {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
 
-        // Guardamos token, rol y user en storage
+        // Guardar token, rol y usuario en Storage()
         await storage.write(key: "auth_token", value: data["token"]);
         await storage.write(key: "refresh_token", value: data["refreshToken"]);
         await storage.write(key: "role", value: data["role"]);
@@ -49,14 +50,14 @@ class _LoginScreenState extends State<LoginScreen> {
 
         final role = (data["role"] as String).toLowerCase();
 
-        // 👉 Caso especial: Apoderado
+        // Apoderado
         if (role == "apoderado") {
           final user = data["user"];
-          final userId = user["id"]; // Users.id
+          final userId = user["id"];
 
           final parentRes = await http.get(
             Uri.parse(
-              "http://localhost:3000/api/parentAssignments/by-user/$userId",
+              "${generalUrl}api/parentAssignments/by-user/$userId",
             ),
           );
 
@@ -64,15 +65,31 @@ class _LoginScreenState extends State<LoginScreen> {
             final decoded = jsonDecode(parentRes.body);
 
             if (decoded is List && decoded.isNotEmpty) {
-              final parentData = decoded[0];
+              // Decodificar la lista de estudiante en base a el apoderado
+              final List assignments = decoded;
 
-              final studentId = parentData["students"]["id"];
-              final parentPersonId = parentData["persons"]["id"];
-              final yearId = parentData["years"]["id"];
+              // Tomar el primer año
+              final first = assignments.first;
+              final parentPersonId = first["persons"]["id"];
+              final yearId = first["years"]["id"];
 
+              // Lista plana de estudiantes
+              final List<Map<String, dynamic>> students = assignments.map<Map<String, dynamic>>((item) {
+                final student = item["students"];
+                final person = student["persons"];
+                return {
+                  "id": student["id"],
+                  "personId": person["id"],
+                  "names": person["names"],
+                  "lastNames": person["lastNames"],
+                  "yearId": item["years"]["id"],
+                };
+              }).toList();
+
+              // Guardar los datos necesarios en Storage()
               await storage.write(
-                key: "parent_assignment",
-                value: jsonEncode(parentData),
+                key: "parent_assignments",
+                value: jsonEncode(assignments),
               );
               await storage.write(
                 key: "parent_user_id",
@@ -83,24 +100,25 @@ class _LoginScreenState extends State<LoginScreen> {
                 value: parentPersonId.toString(),
               );
               await storage.write(
-                key: "parent_student_id",
-                value: studentId.toString(),
-              );
-              await storage.write(
                 key: "parent_year_id",
                 value: yearId.toString(),
               );
+              await storage.write(
+                key: "parent_students",
+                value: jsonEncode(students),
+              );
 
+              // Navegación envíando usuario y lista de estudiantes
               Navigator.pushReplacement(
                 context,
                 MaterialPageRoute(
                   builder: (_) => ParentsNavigationRail(
                     parent: {
                       ...user,
-                      "studentId": studentId,
                       "userId": userId,
                       "parentPersonId": parentPersonId,
                       "yearId": yearId,
+                      "students": students,
                     },
                     token: data["token"],
                   ),
@@ -126,7 +144,7 @@ class _LoginScreenState extends State<LoginScreen> {
           return; // importante
         }
 
-        // 👉 Admin / Docente igual que antes
+        // Administrador y docente
         Widget nextPage = const LoginScreen();
 
         if (role == "administrador") {

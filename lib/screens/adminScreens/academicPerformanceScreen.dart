@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:schoolnet/screens/parentsScreen/StudentPerformanceScreen.dart';
 import 'package:schoolnet/screens/teacherScreens/annualAverageScreen.dart';
 import 'package:schoolnet/screens/teacherScreens/overallCourseAverageScreen.dart';
 import 'package:schoolnet/screens/teacherScreens/teachingBlockAveragesScreen.dart';
@@ -21,9 +22,11 @@ class _AcademicPerformanceScreenState extends State<AcademicPerformanceScreen> {
   final TextEditingController yearDisplayController = TextEditingController();
 
   List<Map<String, dynamic>> annualAverages = [];
+
   List<dynamic> years = [];
   List<dynamic> tutors = [];
   List<dynamic> students = [];
+
   List studentExams = [];
   List schedules = [];
   
@@ -40,6 +43,7 @@ class _AcademicPerformanceScreenState extends State<AcademicPerformanceScreen> {
   bool loadingGeneralAverages = false;
   bool loadingAnnualAverage = false;
   bool yearLoaded = false;
+
   bool get isStudentSelected => selectedStudentId != null;
 
   @override
@@ -51,7 +55,7 @@ class _AcademicPerformanceScreenState extends State<AcademicPerformanceScreen> {
   Future<void> _initData() async {
     await Future.wait([
       _fetchYears(),
-      _fetchTutors(),
+      //_fetchTutors(),
     ]);
   }
 
@@ -74,9 +78,10 @@ class _AcademicPerformanceScreenState extends State<AcademicPerformanceScreen> {
   }
 
   Future<void> _fetchTutors() async {
+    final selectedYearId = yearIdController.text.trim();
     setState(() => loadingTutors = true);
     try {
-      final response = await ApiService.request("api/tutors/list");
+      final response = await ApiService.request("api/tutors/year/$selectedYearId");
       if (response.statusCode == 200) {
         setState(() {
           tutors = json.decode(response.body);
@@ -109,9 +114,12 @@ class _AcademicPerformanceScreenState extends State<AcademicPerformanceScreen> {
       schedules = [];
       assignmentId = null;
     });
+
+    await _fetchTutors();
   }
 
   Future<void> _loadStudentsByTutor() async {
+    final selectedYearId = yearIdController.text.trim();
     if (selectedTutorId == null) return;
 
     setState(() {
@@ -121,8 +129,7 @@ class _AcademicPerformanceScreenState extends State<AcademicPerformanceScreen> {
     });
 
     try {
-      final response = await ApiService.request(
-          "api/studentEnrollments/by-tutor/$selectedTutorId");
+      final response = await ApiService.request("api/studentEnrollments/by-tutor/$selectedTutorId/by-year/$selectedYearId");
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -281,10 +288,10 @@ class _AcademicPerformanceScreenState extends State<AcademicPerformanceScreen> {
     try {
       final responses = await Future.wait([
         http.get(
-          Uri.parse("http://localhost:3000/api/qualifications/by-group/$assignmentId/student/$selectedStudentId"),
+          Uri.parse("${generalUrl}api/qualifications/by-group/$assignmentId/student/$selectedStudentId"),
         ),
         http.get(
-          Uri.parse("http://localhost:3000/api/assistances/by-group/$assignmentId/student/$selectedStudentId"),
+          Uri.parse("${generalUrl}api/assistances/by-group/$assignmentId/student/$selectedStudentId"),
         ),
       ]);
 
@@ -344,7 +351,7 @@ class _AcademicPerformanceScreenState extends State<AcademicPerformanceScreen> {
 
     try {
       final url = Uri.parse(
-        "http://localhost:3000/api/teacherGroups/by-year/${yearIdController.text}/by-tutor/$selectedTutorId",
+        "${generalUrl}api/teacherGroups/by-year/${yearIdController.text}/by-tutor/$selectedTutorId",
       );
 
       final res = await http.get(url);
@@ -388,7 +395,7 @@ class _AcademicPerformanceScreenState extends State<AcademicPerformanceScreen> {
       studentExams = [];
     });
 
-    final url = Uri.parse("http://localhost:3000/api/exams/student/$selectedStudentId/group/$assignmentId");
+    final url = Uri.parse("${generalUrl}api/exams/student/$selectedStudentId/group/$assignmentId");
 
     try {
       final res = await http.get(url);
@@ -672,7 +679,7 @@ class _AcademicPerformanceScreenState extends State<AcademicPerformanceScreen> {
                       return;
                     }
                     final url = Uri.parse(
-                        "http://localhost:3000/api/teachingblockaverage/byStudent/$selectedStudentId/year/${yearIdController.text}/assignment/$assignmentId"
+                        "${generalUrl}api/teachingblockaverage/byStudent/$selectedStudentId/year/${yearIdController.text}/assignment/$assignmentId"
                     );
                     final res = await http.get(url, headers: {
                       "Authorization": "Bearer",
@@ -750,6 +757,30 @@ class _AcademicPerformanceScreenState extends State<AcademicPerformanceScreen> {
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
                     ),
+                  ),
+                ),
+                const SizedBox(height: 15),
+                Center(
+                  child: GenerateReportButton(
+                    yearId: yearIdController.text.isNotEmpty ? yearIdController.text : null,
+                    studentId: selectedStudentId,
+                    studentName: () {
+                      try {
+                        final st = students.firstWhere(
+                              (s) => s["id"].toString() == selectedStudentId,
+                          orElse: () => null,
+                        );
+                        if (st == null) return null;
+                        final names = st['persons']["names"] ?? "";
+                        final lastNames = st['persons']["lastNames"] ?? "";
+                        return "$names $lastNames";
+                      } catch (_) {
+                        return null;
+                      }
+                    }(),
+                    yearLabel: yearDisplayController.text.isNotEmpty
+                        ? yearDisplayController.text
+                        : null,
                   ),
                 ),
                 const SizedBox(height: 15),

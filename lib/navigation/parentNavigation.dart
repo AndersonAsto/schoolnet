@@ -24,13 +24,13 @@ class ParentsNavigationRail extends StatefulWidget {
 class _ParentsNavigationRailState extends State<ParentsNavigationRail> {
   late SidebarXController _controller;
   late final int userId;
-  late final int studentId;
+  late final List<dynamic> students;
 
   @override
   void initState() {
     super.initState();
     userId = widget.parent["userId"];
-    studentId = widget.parent["studentId"];
+    students = widget.parent["students"] ?? [];
     _controller = SidebarXController(selectedIndex: 0, extended: true);
   }
 
@@ -42,7 +42,7 @@ class _ParentsNavigationRailState extends State<ParentsNavigationRail> {
       StudentPerformanceScreen(
           parentId: parentId,
           token: widget.token,
-          studentId: studentId
+          students: students,
       )
     ];
 

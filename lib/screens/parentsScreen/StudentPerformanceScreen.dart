@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:schoolnet/screens/teacherScreens/annualAverageScreen.dart';
 import 'package:schoolnet/screens/teacherScreens/overallCourseAverageScreen.dart';
@@ -9,15 +8,25 @@ import 'package:schoolnet/utils/colors.dart';
 import 'package:http/http.dart' as http;
 import 'package:schoolnet/utils/customDataSelection.dart';
 import 'package:schoolnet/utils/customTextFields.dart';
+import 'package:flutter/foundation.dart' ;
+import 'package:url_launcher/url_launcher.dart';
+import 'dart:io' show File, Platform;
+import 'dart:typed_data';
+import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:url_launcher/url_launcher.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:open_filex/open_filex.dart';
+import 'dart:html' as html;
 
 class StudentPerformanceScreen extends StatefulWidget {
   final int parentId;
-  final int studentId;
+  final List<dynamic> students;
   final String token;
   const StudentPerformanceScreen({
     super.key,
     required this.parentId,
-    required this.studentId,
+    required this.students,
     required this.token
   });
 
@@ -49,27 +58,24 @@ class _StudentPerformanceScreenState extends State<StudentPerformanceScreen> {
   bool loadingGeneralAverages = false;
   bool loadingAnnualAverage = false;
   bool yearLoaded = false;
+
   bool get isStudentSelected => selectedStudentId != null;
+  bool get isCourseSelected => assignmentId != null;
+  bool get isYearSelected => yearIdController.text.isNotEmpty;
 
   @override
   void initState() {
     super.initState();
-    selectedStudentId = widget.studentId.toString();
-    _initData();
-  }
-
-  Future<void> _initData() async {
-    await Future.wait([
-      _fetchYears(),
-      _fetchTutorByStudent(),
-    ]);
+    students = List<dynamic>.from(widget.students);
+    selectedStudentId = null;
+    _fetchYears();
   }
 
   Future<void> _fetchTutorByStudent() async {
     setState(() => loadingTutors = true);
     try {
       final url = Uri.parse(
-        "http://localhost:3000/api/tutors/student/$selectedStudentId",
+        "${generalUrl}api/tutors/student/$selectedStudentId",
       );
       final res = await http.get(url);
 
@@ -116,25 +122,52 @@ class _StudentPerformanceScreenState extends State<StudentPerformanceScreen> {
     }
   }
 
-  Future<void> _onLoadYearAndTutorPressed() async {
-    final selectedYearId = yearIdController.text.trim();
-    if (selectedYearId.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Seleccione primero un año escolar.")),
+  Future<void> _fetchAnnualAveragesForAllStudents() async {
+    if (yearIdController.text.isEmpty || students.isEmpty) return;
+
+    setState(() => loadingAnnualAverages = true);
+
+    try {
+      final studentIds = students.map((s) => s['id']).toList();
+
+      final res = await http.post(
+        Uri.parse('${generalUrl}api/annualAverage/by-year-and-students'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ${widget.token}',
+        },
+        body: jsonEncode({
+          'yearId': int.parse(yearIdController.text),
+          'studentIds': studentIds,
+        }),
       );
-      return;
+
+      if (res.statusCode == 200) {
+        final decoded = jsonDecode(res.body);
+        final data = decoded['data'] ?? [];
+        setState(() {
+          annualAverages =
+          List<Map<String, dynamic>>.from(data as List<dynamic>);
+        });
+      } else if (res.statusCode == 404) {
+        setState(() => annualAverages = []);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('No se encontraron promedios anuales.')),
+        );
+      } else {
+        setState(() => annualAverages = []);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: ${res.body}')),
+        );
+      }
+    } catch (e) {
+      setState(() => annualAverages = []);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error de conexión: $e')),
+      );
+    } finally {
+      setState(() => loadingAnnualAverages = false);
     }
-
-    setState(() {
-      yearLoaded = true;
-      students = [];
-      annualAverages = [];
-      schedules = [];
-      assignmentId = null;
-    });
-
-    await _fetchAnnualAverageByStudent();
-    await _loadSchedulesByYearAndTutor();
   }
 
   Future<void> _fetchAnnualAverageByStudent() async {
@@ -158,10 +191,13 @@ class _StudentPerformanceScreenState extends State<StudentPerformanceScreen> {
         });
       } else {
         setState(() => annualAverages = []);
+        final Map<String, dynamic> errorData = json.decode(response.body);
+        final backendMessage = errorData['message'] ?? "Mensaje de error desconocido";
+        final formattedMessage = "Error ${response.statusCode}: $backendMessage";
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              "Error al obtener promedio anual del estudiante: ${response.body}",
+              "Error al obtener promedio anual del estudiante: $formattedMessage",
             ),
           ),
         );
@@ -236,10 +272,10 @@ class _StudentPerformanceScreenState extends State<StudentPerformanceScreen> {
     try {
       final responses = await Future.wait([
         http.get(
-          Uri.parse("http://localhost:3000/api/qualifications/by-group/$assignmentId/student/$selectedStudentId"),
+          Uri.parse("${generalUrl}api/qualifications/by-group/$assignmentId/student/$selectedStudentId"),
         ),
         http.get(
-          Uri.parse("http://localhost:3000/api/assistances/by-group/$assignmentId/student/$selectedStudentId"),
+          Uri.parse("${generalUrl}api/assistances/by-group/$assignmentId/student/$selectedStudentId"),
         ),
       ]);
 
@@ -299,7 +335,7 @@ class _StudentPerformanceScreenState extends State<StudentPerformanceScreen> {
 
     try {
       final url = Uri.parse(
-        "http://localhost:3000/api/teacherGroups/by-year/${yearIdController.text}/by-tutor/$selectedTutorId",
+        "${generalUrl}api/teacherGroups/by-year/${yearIdController.text}/by-tutor/$selectedTutorId",
       );
 
       final res = await http.get(url);
@@ -308,7 +344,6 @@ class _StudentPerformanceScreenState extends State<StudentPerformanceScreen> {
         final data = jsonDecode(res.body);
 
         setState(() {
-          // asumo que el endpoint devuelve un array como el que pegaste
           schedules = data is List ? data : [];
         });
 
@@ -343,7 +378,7 @@ class _StudentPerformanceScreenState extends State<StudentPerformanceScreen> {
       studentExams = [];
     });
 
-    final url = Uri.parse("http://localhost:3000/api/exams/student/$selectedStudentId/group/$assignmentId");
+    final url = Uri.parse("${generalUrl}api/exams/student/$selectedStudentId/group/$assignmentId");
 
     try {
       final res = await http.get(url);
@@ -382,11 +417,70 @@ class _StudentPerformanceScreenState extends State<StudentPerformanceScreen> {
     );
   }
 
+  Future<void> _onLoadYearAndTutorPressed() async {
+    final selectedYearId = yearIdController.text.trim();
+    if (selectedYearId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Seleccione primero un año escolar.")),
+      );
+      return;
+    }
+
+    if (students.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("No hay estudiantes asociados.")),
+      );
+      return;
+    }
+
+    setState(() {
+      yearLoaded = true;
+      annualAverages = [];
+      schedules = [];
+      assignmentId = null;
+      selectedStudentId = null;   // sin filtro al inicio
+    });
+
+    // Tomamos el primer estudiante para obtener el tutor de la sección
+    final firstStudentId = students.first["id"].toString();
+    selectedTutorId = null;
+
+    // 1. Cargar tutor a partir del primer estudiante
+    final urlTutor = Uri.parse(
+      "${generalUrl}api/tutors/student/$firstStudentId",
+    );
+
+    try {
+      final resTutor = await http.get(urlTutor);
+      if (resTutor.statusCode == 200) {
+        final data = jsonDecode(resTutor.body);
+        setState(() {
+          tutors = [data];
+          selectedTutorId = data["id"].toString();
+        });
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("No se pudo obtener tutor del grupo.")),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error al obtener tutor del grupo: $e")),
+      );
+    }
+
+    // 2. Cargar promedios de TODOS los estudiantes de una vez
+    await _fetchAnnualAveragesForAllStudents();
+
+    // 3. Cargar horarios del tutor
+    await _loadSchedulesByYearAndTutor();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Rendimiento Académico de Estudiante ${widget.parentId}', style: const TextStyle(fontSize: 14, color: Colors.white),),
+        title: Text('Rendimiento Académico de Estudiante', style: const TextStyle(fontSize: 14, color: Colors.white),),
         automaticallyImplyLeading: false,
         backgroundColor: appColors[3],
       ),
@@ -419,10 +513,7 @@ class _StudentPerformanceScreenState extends State<StudentPerformanceScreen> {
                   const SizedBox(width: 15),
                   ElevatedButton.icon(
                     onPressed: _onLoadYearAndTutorPressed,
-                    icon: const Icon(
-                      Icons.refresh,
-                      color: Colors.white,
-                    ),
+                    icon: const Icon(Icons.refresh, color: Colors.white,),
                     label: const Text("Cargar Grupo"),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: appColors[3],
@@ -436,7 +527,7 @@ class _StudentPerformanceScreenState extends State<StudentPerformanceScreen> {
                 ],
               ),
               const SizedBox(height: 15),
-              if (students.isNotEmpty) ...[
+              if (yearLoaded && students.isNotEmpty) ...[
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 0),
                   child: loadingStudents
@@ -451,15 +542,15 @@ class _StudentPerformanceScreenState extends State<StudentPerformanceScreen> {
                         prefixIcon:
                         const Icon(Icons.person_search_outlined),
                       ),
-                      value: students.any((s) =>
-                      s["id"].toString() == selectedStudentId)
+                      value: students.any(
+                              (s) => s["id"].toString() == selectedStudentId)
                           ? selectedStudentId
                           : null,
                       items: students
                           .map<DropdownMenuItem<String>>((student) {
-                        final person = student["persons"];
-                        final studentName =
-                            "${person["names"]} ${person["lastNames"]}";
+                        final person = student["names"];
+                        final lastName = student['lastNames'];
+                        final studentName = "$person $lastName";
                         return DropdownMenuItem<String>(
                           value: student["id"].toString(),
                           child: Text(studentName),
@@ -469,11 +560,19 @@ class _StudentPerformanceScreenState extends State<StudentPerformanceScreen> {
                         setState(() {
                           selectedStudentId = val;
                           annualAverages = [];
+                          schedules = [];
+                          assignmentId = null;
                         });
-                        if (val != null) {
-                          await _fetchAnnualAverageByStudent();
-                        } else {
 
+                        if (!isYearSelected) return;
+
+                        if (val == null) {
+                          await _fetchAnnualAveragesForAllStudents();
+                          await _loadSchedulesByYearAndTutor();
+                        } else {
+                          await _fetchTutorByStudent();
+                          await _fetchAnnualAverageByStudent();
+                          await _loadSchedulesByYearAndTutor();
                         }
                       },
                     ),
@@ -481,8 +580,7 @@ class _StudentPerformanceScreenState extends State<StudentPerformanceScreen> {
                 ),
                 const SizedBox(height: 15),
               ],
-              // Acciones por estudiante
-              if (isStudentSelected)...[
+              if (yearLoaded && isStudentSelected) ...[
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 0),
                   child: loadingSchedules
@@ -490,14 +588,17 @@ class _StudentPerformanceScreenState extends State<StudentPerformanceScreen> {
                       : CustomInputContainer(
                     child: DropdownButtonFormField<String>(
                       decoration: InputDecoration(
-                        labelText: "Cursos",
+                        labelText: "Seleccionar Curso",
                         border: InputBorder.none,
                         filled: true,
                         fillColor: Colors.grey[100],
-                        prefixIcon: const Icon(Icons.collections_bookmark_outlined),
+                        prefixIcon: const Icon(
+                          Icons.collections_bookmark_outlined,
+                        ),
                       ),
                       value: assignmentId,
-                      items: schedules.map<DropdownMenuItem<String>>((item) {
+                      items: schedules
+                          .map<DropdownMenuItem<String>>((item) {
                         final course = item["courses"]?["course"] ?? "Sin curso";
                         final grade = item["grades"]?["grade"] ?? "—";
                         final section = item["sections"]?["seccion"] ?? "—";
@@ -506,27 +607,30 @@ class _StudentPerformanceScreenState extends State<StudentPerformanceScreen> {
                           child: Text("$course - $grade $section"),
                         );
                       }).toList(),
-                      onChanged: (val) => setState(() => assignmentId = val),
+                      onChanged: (val) =>
+                          setState(() => assignmentId = val),
                     ),
                   ),
                 ),
                 const SizedBox(height: 15),
+              ],
+              if (yearLoaded && isStudentSelected && isCourseSelected) ...[
                 ElevatedButton.icon(
                   onPressed: () {
-                    if (assignmentId != null && selectedStudentId != null) {
-                      _showStudentDailyRecordsModal();
-                    } else {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text("Seleccione horario, día escolar y estudiante.")),
-                      );
-                    }
+                    _showStudentDailyRecordsModal();
                   },
-                  icon: const Icon(Icons.visibility, color: Colors.white,),
-                  label: const Text("Ver Calificación Diaria", style: TextStyle(color: Colors.white)),
+                  icon: const Icon(Icons.visibility, color: Colors.white),
+                  label: const Text(
+                    "Ver Calificación Diaria",
+                    style: TextStyle(color: Colors.white),
+                  ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: appColors[9],
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 16,
+                      horizontal: 24,
+                    ),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
                     ),
@@ -535,28 +639,32 @@ class _StudentPerformanceScreenState extends State<StudentPerformanceScreen> {
                 const SizedBox(height: 15),
                 ElevatedButton.icon(
                   onPressed: () async {
-                    if (selectedStudentId == null || assignmentId == null) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text("Debe seleccionar un estudiante y un curso.")),
-                      );
-                      return;
-                    }
                     await _loadExamsByStudent();
                     if (!mounted) return;
                     if (studentExams.isNotEmpty) {
                       await _showStudentExamsModal();
                     } else {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text("No hay registros de evaluaciones para este estudiante.")),
+                        const SnackBar(
+                          content: Text(
+                            "No hay registros de evaluaciones para este estudiante.",
+                          ),
+                        ),
                       );
                     }
                   },
                   icon: const Icon(Icons.visibility, color: Colors.white),
-                  label: const Text("Ver Calificación de Evaluaciones", style: TextStyle(color: Colors.white)),
+                  label: const Text(
+                    "Ver Calificación de Evaluaciones",
+                    style: TextStyle(color: Colors.white),
+                  ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: appColors[9],
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 16,
+                      horizontal: 24,
+                    ),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
                     ),
@@ -565,41 +673,41 @@ class _StudentPerformanceScreenState extends State<StudentPerformanceScreen> {
                 const SizedBox(height: 15),
                 ElevatedButton.icon(
                   onPressed: () async {
-                    if (selectedStudentId == null || assignmentId == null || yearIdController.text.isEmpty) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text("Debe seleccionar año, horario y estudiante.")),
-                      );
-                      return;
-                    }
                     final url = Uri.parse(
-                        "http://localhost:3000/api/teachingblockaverage/byStudent/$selectedStudentId/year/${yearIdController.text}/assignment/$assignmentId"
+                      "${generalUrl}api/teachingblockaverage/byStudent/$selectedStudentId/year/${yearIdController.text}/assignment/$assignmentId",
                     );
                     final res = await http.get(url, headers: {
-                      "Authorization": "Bearer",
+                      "Authorization": "Bearer ${widget.token}",
                       "Content-Type": "application/json",
                     });
-
                     if (res.statusCode == 200) {
                       final data = json.decode(res.body);
                       showDialog(
                         context: context,
                         builder: (_) => StudentBlockAveragesDialog(
-                          blockAverages: List<Map<String, dynamic>>.from(data),
+                          blockAverages:
+                          List<Map<String, dynamic>>.from(data),
                         ),
                       );
                     } else {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text("Error al obtener promedios: ${res.body}")),
+                        SnackBar(
+                          content: Text(
+                            "Error al obtener promedios: ${res.body}",
+                          ),
+                        ),
                       );
                     }
                   },
-                  icon: const Icon(Icons.bar_chart, color: Colors.white,),
+                  icon: const Icon(Icons.bar_chart, color: Colors.white),
                   label: const Text("Ver Promedios por Bloques Lectivos del Curso"),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: appColors[9],
                     foregroundColor: Colors.white,
-                    padding:
-                    const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 16,
+                      horizontal: 24,
+                    ),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
                     ),
@@ -607,7 +715,7 @@ class _StudentPerformanceScreenState extends State<StudentPerformanceScreen> {
                 ),
                 const SizedBox(height: 15),
                 ElevatedButton.icon(
-                  onPressed: loadingGeneralAverages
+                  onPressed: loadingGeneralAverages || !isStudentSelected
                       ? null
                       : _fetchGeneralAveragesForStudent,
                   icon: loadingGeneralAverages
@@ -625,10 +733,62 @@ class _StudentPerformanceScreenState extends State<StudentPerformanceScreen> {
                     backgroundColor: appColors[9],
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(
-                        vertical: 16, horizontal: 24),
+                      vertical: 16,
+                      horizontal: 24,
+                    ),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
                     ),
+                  ),
+                ),
+                const SizedBox(height: 15),
+                ElevatedButton.icon(
+                  onPressed: () async {
+                    setState(() {
+                      selectedStudentId = null;
+                      assignmentId = null;
+                      annualAverages = [];
+                    });
+                    await _fetchAnnualAveragesForAllStudents();
+                    await _loadSchedulesByYearAndTutor();
+                  },
+                  icon: const Icon(Icons.close, color: Colors.white),
+                  label: const Text("Quitar Filtro Estudiante"),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: appColors[9],
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 16,
+                      horizontal: 24,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 15),
+                Center(
+                  child: GenerateReportButton(
+                    yearId: yearIdController.text.isNotEmpty ? yearIdController.text : null,
+                    studentId: selectedStudentId,
+                    studentName: () {
+                      try {
+                        final st = students.firstWhere(
+                              (s) => s["id"].toString() == selectedStudentId,
+                          orElse: () => null,
+                        );
+                        if (st == null) return null;
+                        final names = st["names"] ?? "";
+                        final lastNames = st["lastNames"] ?? "";
+                        return "$names $lastNames";
+                      } catch (_) {
+                        return null;
+                      }
+                    }(),
+                    token: widget.token,
+                    yearLabel: yearDisplayController.text.isNotEmpty
+                        ? yearDisplayController.text
+                        : null,
                   ),
                 ),
                 const SizedBox(height: 15),
@@ -638,12 +798,12 @@ class _StudentPerformanceScreenState extends State<StudentPerformanceScreen> {
                 const Center(child: CircularProgressIndicator())
               else if (annualAverages.isNotEmpty) ...[
                 CustomTitleWidget(
-                  padding: const EdgeInsets.symmetric(
-                      vertical: 8, horizontal: 16),
+                  padding:
+                  const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
                   child: Text(
                     isStudentSelected
-                        ? "Rendimiento Académico General del Estudiante"
-                        : "Rendimiento Académico General del Grupo",
+                        ? "Rendimiento Académico General de Estudiante"
+                        : "Rendimiento Académico General de Estudiantes",
                     style: const TextStyle(
                       fontSize: 10,
                       fontWeight: FontWeight.bold,
@@ -656,6 +816,195 @@ class _StudentPerformanceScreenState extends State<StudentPerformanceScreen> {
               ],
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class GenerateReportButton extends StatelessWidget {
+  final String? yearId;
+  final String? studentId;
+  final String? studentName;
+  final String? token;
+  final VoidCallback? onBeforeRequest;
+  final VoidCallback? onAfterRequest;
+  final String? yearLabel;
+
+  const GenerateReportButton({
+    super.key,
+    required this.yearId,
+    required this.studentId,
+    required this.studentName,
+    required this.yearLabel,
+    this.token,
+    this.onBeforeRequest,
+    this.onAfterRequest,
+  });
+
+  bool get _canGenerate => yearId != null && yearId!.isNotEmpty && studentId != null;
+
+  String _getFileNameFromHeaders(http.Response res) {
+    final contentDisposition = res.headers['content-disposition'];
+
+    debugPrint('Content-Disposition: $contentDisposition');
+
+    if (contentDisposition != null) {
+      final regex = RegExp(r'filename="?([^\";]+)"?');
+      final match = regex.firstMatch(contentDisposition);
+
+      if (match != null && match.groupCount >= 1) {
+        String filename = match.group(1)!;
+        return filename.replaceAll('"', '').trim();
+      }
+    }
+
+    return 'reporte.pdf';
+  }
+
+  Future<void> _downloadReport(BuildContext context) async {
+    if (!_canGenerate) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Debe seleccionar año y estudiante.')),
+      );
+      return;
+    }
+
+    final url = Uri.parse(
+      '${generalUrl}api/reports/student/$studentId/year/$yearId',
+    );
+
+    try {
+      onBeforeRequest?.call();
+
+      final res = await http.get(
+        url,
+        headers: {
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (res.statusCode != 200) {
+        throw 'Error al generar reporte (${res.statusCode})';
+      }
+
+      final bytes = res.bodyBytes;
+      final fileName = _getFileNameFromHeaders(res);
+
+      if (kIsWeb) {
+        final blob = html.Blob([bytes], 'application/pdf');
+        final blobUrl = html.Url.createObjectUrlFromBlob(blob);
+
+        final anchor = html.AnchorElement(href: blobUrl)
+          ..setAttribute('download', fileName)
+          ..style.display = 'none';
+
+        html.document.body!.append(anchor);
+        anchor.click();
+        anchor.remove();
+        html.Url.revokeObjectUrl(blobUrl);
+      } else {
+        final dir = await getApplicationDocumentsDirectory();
+        final file = File('${dir.path}/$fileName');
+        await file.writeAsBytes(bytes);
+
+        await OpenFilex.open(file.path);
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error al descargar reporte: $e')),
+      );
+    } finally {
+      onAfterRequest?.call();
+    }
+  }
+
+  Future<void> _showConfirmDialog(BuildContext context) async {
+    if (!_canGenerate) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Debe seleccionar año y estudiante.')),
+      );
+      return;
+    }
+
+    await showDialog(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          title: Column(
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.document_scanner_outlined, color: appColors[3]),
+                  const SizedBox(width: 8),
+                  const Text(
+                    "Confirmar Generación de Reporte",
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+              const Divider(color: Colors.black),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('¿Desea generar el reporte de rendimiento académico?'),
+              const SizedBox(height: 8),
+              if (studentName != null) Text('Estudiante: $studentName'),
+              if (yearLabel != null) ...[
+                Text('Año: $yearLabel'),
+              ],
+              const Divider(color: Colors.black),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('Cancelar'),
+            ),
+            ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: appColors[3],
+                foregroundColor: Colors.white,
+                padding:
+                const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              onPressed: () async {
+                Navigator.of(ctx).pop();
+                await _downloadReport(context);
+              },
+              icon: const Icon(
+                Icons.download,
+                color: Colors.white,
+              ),
+              label: const Text(
+                'Confirmar',
+                style: TextStyle(color: Colors.white),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ElevatedButton.icon(
+      onPressed: _canGenerate ? () => _showConfirmDialog(context) : null,
+      icon: const Icon(Icons.document_scanner_outlined, color: Colors.white),
+      label: const Text("Generar Reporte", style: TextStyle(color: Colors.white, fontSize: 12),),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: _canGenerate ? appColors[3] : Colors.grey,
+        foregroundColor: Colors.white,
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
         ),
       ),
     );

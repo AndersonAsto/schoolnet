@@ -90,14 +90,14 @@ class _GeneralAverageScreenState extends State<GeneralAverageScreen> {
     try {
       final responses = await Future.wait([
         http.get(
-          Uri.parse("http://localhost:3000/api/teacherGroups/by-user/${widget.teacherId}/by-year/$selectedYearId"),
+          Uri.parse("${generalUrl}api/teacherGroups/by-user/${widget.teacherId}/by-year/$selectedYearId"),
           headers: {
             "Authorization": "Bearer ${token ?? widget.token}",
             "Content-Type": "application/json",
           },
         ),
         http.get(
-          Uri.parse("http://localhost:3000/api/teachingBlocks/byYear/$selectedYearId"),
+          Uri.parse("${generalUrl}api/teachingBlocks/byYear/$selectedYearId"),
           headers: {
             "Authorization": "Bearer ${token ?? widget.token}",
             "Content-Type": "application/json",
@@ -154,12 +154,11 @@ class _GeneralAverageScreenState extends State<GeneralAverageScreen> {
     setState(() {
       loadingStudents = true;
       students = [];
-      // 🔥 Reset dependencias del horario
       selectedStudentId = null;
       generalAverages = [];
     });
 
-    final url = Uri.parse("http://localhost:3000/api/studentEnrollments/by-group/$selectedScheduleId");
+    final url = Uri.parse("${generalUrl}api/studentEnrollments/by-group/$selectedScheduleId");
 
     try {
       final res = await http.get(
@@ -202,11 +201,11 @@ class _GeneralAverageScreenState extends State<GeneralAverageScreen> {
 
     if (selectedStudentId != null) {
       url = Uri.parse(
-        "http://localhost:3000/api/generalAvarage/by-SYA?studentId=$selectedStudentId&yearId=${yearIdController.text}&assignmentId=$selectedScheduleId",
+        "${generalUrl}api/generalAvarage/by-SYA?studentId=$selectedStudentId&yearId=${yearIdController.text}&assignmentId=$selectedScheduleId",
       );
     } else {
       url = Uri.parse(
-        "http://localhost:3000/api/generalAvarage/by-assignment?yearId=${yearIdController.text}&assignmentId=$selectedScheduleId",
+        "${generalUrl}api/generalAvarage/by-assignment?yearId=${yearIdController.text}&assignmentId=$selectedScheduleId",
       );
     }
 
@@ -233,7 +232,7 @@ class _GeneralAverageScreenState extends State<GeneralAverageScreen> {
   }
 
   Future<void> _calculateAnnualAverage() async {
-    final url = Uri.parse("http://localhost:3000/api/generalAvarage/calculate");
+    final url = Uri.parse("${generalUrl}api/generalAvarage/calculate");
     final res = await http.post(
       url,
       headers: {
@@ -263,10 +262,7 @@ class _GeneralAverageScreenState extends State<GeneralAverageScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          "Promedio General de Curso - Docente ${widget.teacherId}",
-          style: const TextStyle(fontSize: 15, color: Colors.white),
-        ),
+        title: const Text("Promedio General de Curso", style: TextStyle(fontSize: 15, color: Colors.white),),
         automaticallyImplyLeading: false,
         backgroundColor: appColors[3],
       ),
@@ -366,11 +362,11 @@ class _GeneralAverageScreenState extends State<GeneralAverageScreen> {
                       fillColor: Colors.grey[100],
                       prefixIcon: const Icon(Icons.person_search_outlined),
                     ),
-                    // 🔹 Si el estudiante seleccionado ya no está en la lista, mostrar null
+                    // Si el estudiante seleccionado ya no está en la lista, mostrar null
                     value: students.any((s) => s["id"].toString() == selectedStudentId)
                         ? selectedStudentId
                         : null,
-                    // 🔹 Lista desplegable de estudiantes
+                    // Lista desplegable de estudiantes
                     items: students.map<DropdownMenuItem<String>>((student) {
                       final person = student["persons"];
                       final studentName = "${person["names"]} ${person["lastNames"]}";
@@ -379,7 +375,7 @@ class _GeneralAverageScreenState extends State<GeneralAverageScreen> {
                         child: Text(studentName),
                       );
                     }).toList(),
-                    // 🔹 Cuando seleccionas un estudiante específico
+                    // Cuando seleccionas un estudiante específico
                     onChanged: (val) async {
                       setState(() {
                         selectedStudentId = val;
@@ -414,7 +410,7 @@ class _GeneralAverageScreenState extends State<GeneralAverageScreen> {
                             return;
                           }
                           final url = Uri.parse(
-                              "http://localhost:3000/api/teachingblockaverage/byStudent/$selectedStudentId/year/${yearIdController.text}/assignment/$selectedScheduleId"
+                              "${generalUrl}api/teachingblockaverage/byStudent/$selectedStudentId/year/${yearIdController.text}/assignment/$selectedScheduleId"
                           );
                           final res = await http.get(url, headers: {
                             "Authorization": "Bearer ${token ?? widget.token}",
